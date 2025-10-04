@@ -1,0 +1,10 @@
+/* Pull OpenDyslexic from CDN (or package your own files if you prefer offline) */
+@import url('https://cdn.jsdelivr.net/gh/antijingoist/open-dyslexic/alternates/OpenDyslexic-Regular.css');
+
+@font-face {
+  font-family: 'OpenDyslexic';
+  src: local('OpenDyslexic Regular'), local('OpenDyslexic'),
+       url('https://cdn.jsdelivr.net/gh/antijingoist/open-dyslexic/otf/OpenDyslexic-Regular.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}

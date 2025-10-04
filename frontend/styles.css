@@ -1,0 +1,13 @@
+/* Focus mode: dim page; highlight hovered paragraph/list item */
+.ndh-focus body { filter: grayscale(0.2) brightness(0.95); }
+.ndh-focus p:hover, .ndh-focus li:hover, .ndh-focus blockquote:hover {
+  outline: 2px solid #5aa; background: rgba(0,0,0,0.03);
+}
+
+/* Dyslexia-friendly typography */
+.ndh-dys body { letter-spacing: 0.02em; line-height: 1.6; }
+.ndh-dys * { font-family: Arial, Verdana, "OpenDyslexic", system-ui, sans-serif !important; }
+
+/* High contrast */
+.ndh-contrast body { color: #111 !important; background: #fff !important; }
+.ndh-contrast a { text-decoration: underline; }

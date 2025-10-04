@@ -1,0 +1,41 @@
+# 🧠 Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.env
+venv/
+.venv/
+env/
+ENV/
+
+# 🪄 Node.js / Frontend
+node_modules/
+dist/
+build/
+*.log
+
+# ⚙️ VS Code / IDE
+.vscode/
+.idea/
+
+# 🧾 OS files
+.DS_Store
+Thumbs.db
+
+# 🔑 Credentials or local configs
+*.env
+*.pem
+*.key
+*.crt
+*.p12
+*.sqlite3
+*.db
+secrets.json
+
+# 🚀 Cache
+__pycache__/
+*.cache/
+.cache/
