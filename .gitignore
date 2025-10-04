@@ -1,4 +1,4 @@
-# 🧠 Python
+# 🧠 Python / FastAPI
 __pycache__/
 *.py[cod]
 *.pyo
@@ -10,14 +10,16 @@ venv/
 .venv/
 env/
 ENV/
+*.db
+*.sqlite3
 
-# 🪄 Node.js / Frontend
+# 🪄 Node.js / Frontend (Chrome Extension)
 node_modules/
 dist/
 build/
 *.log
 
-# ⚙️ VS Code / IDE
+# ⚙️ Editor / IDE
 .vscode/
 .idea/
 
@@ -25,17 +27,14 @@ build/
 .DS_Store
 Thumbs.db
 
-# 🔑 Credentials or local configs
+# 🔑 Secrets or credentials
 *.env
 *.pem
 *.key
 *.crt
 *.p12
-*.sqlite3
-*.db
 secrets.json
 
 # 🚀 Cache
-__pycache__/
-*.cache/
 .cache/
+__pycache__/
