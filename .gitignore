@@ -1,4 +1,5 @@
-# 🧠 Python / FastAPI
+cat > .gitignore <<'EOF'
+# Python / FastAPI
 __pycache__/
 *.py[cod]
 *.pyo
@@ -13,28 +14,26 @@ ENV/
 *.db
 *.sqlite3
 
-# 🪄 Node.js / Frontend (Chrome Extension)
+# Node.js / Chrome Extension
 node_modules/
 dist/
 build/
 *.log
 
-# ⚙️ Editor / IDE
+# Editor / IDE
 .vscode/
 .idea/
 
-# 🧾 OS files
+# OS
 .DS_Store
 Thumbs.db
 
-# 🔑 Secrets or credentials
-*.env
+# Secrets
 *.pem
 *.key
 *.crt
 *.p12
 secrets.json
-
-# 🚀 Cache
 .cache/
-__pycache__/
+EOF
+
