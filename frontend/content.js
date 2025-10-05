@@ -119,8 +119,9 @@ function ensureOverlay() {
       .mask { 
         position: fixed;
         inset: 0;
-        background: rgba(0,0,0,.6);
-        backdrop-filter: blur(4px);
+        background: rgba(0,0,0,0);
+        backdrop-filter: none;
+        pointer-events: none;
       }
       .hide { display: none; }
     </style>
@@ -203,8 +204,8 @@ function applySettings(host, settings) {
   card.classList.toggle("spaced", !!settings.spacing);
   host.shadowRoot.host.classList.toggle("hc", !!settings.highContrast);
 
-  // focus mask
-  mask.classList.toggle("hide", !settings.focusMask);
+  // focus mask - ALWAYS HIDDEN (disabled blur feature)
+  mask.classList.add("hide");
 
   // tts rate
   host.dataset.ttsrate = String(settings.ttsRate || 0.95);
