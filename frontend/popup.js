@@ -1,6 +1,17 @@
 // --- Status helper ---
 const statusEl = document.getElementById("ndhStatus");
-const setStatus = (m) => (statusEl.textContent = m || "");
+const allButtons = document.querySelectorAll(".btn");
+
+const setStatus = (message, type = "") => {
+  statusEl.className = `status ${type}`;
+  if (message === "Working…") {
+    statusEl.innerHTML = `<div class="spinner"></div><span>${message}</span>`;
+    allButtons.forEach(btn => btn.classList.add("loading"));
+  } else {
+    statusEl.textContent = message || "";
+    allButtons.forEach(btn => btn.classList.remove("loading"));
+  }
+};
 
 // --- Utilities ---
 async function getActiveTab() {
@@ -42,14 +53,14 @@ async function getPageText(tabId) {
   });
 }
 
-function callServiceWorker(mode, text, timeoutMs = 15000) {
+function callServiceWorker(mode, text, timeoutMs = 65000) {
   return new Promise((resolve) => {
     let done = false;
 
     const timer = setTimeout(() => {
       if (!done) {
         done = true;
-        resolve({ ok: false, error: "Timed out waiting for background response." });
+        resolve({ ok: false, error: "Request timed out after 65 seconds. The AI models may be loading or the backend is slow. Try again in a moment." });
       }
     }, timeoutMs);
 
@@ -60,39 +71,144 @@ function callServiceWorker(mode, text, timeoutMs = 15000) {
 
       const err = chrome.runtime.lastError;
       if (err) {
-        // This is the “message port closed before a response was received” case
-        return resolve({ ok: false, error: err.message || "Background not available." });
+        // This is the "message port closed before a response was received" case
+        return resolve({ ok: false, error: `Extension error: ${err.message}. Try reloading the extension.` });
       }
 
-      resolve(resp || { ok: false, error: "No response from background." });
+      resolve(resp || { ok: false, error: "No response from background service. Try reloading the extension." });
     });
   });
 }
 
+async function ensureContentScriptLoaded(tabId) {
+  console.log("[Popup] Pinging content script...");
+  
+  // Try to ping the content script with retries
+  for (let i = 0; i < 3; i++) {
+    try {
+      const response = await new Promise((resolve, reject) => {
+        chrome.tabs.sendMessage(tabId, { type: "NDH_PING" }, (response) => {
+          if (chrome.runtime.lastError) {
+            reject(chrome.runtime.lastError);
+          } else {
+            resolve(response);
+          }
+        });
+      });
+      
+      if (response) {
+        console.log("[Popup] Content script responded to PING");
+        return; // Content script is ready
+      }
+    } catch (err) {
+      console.log(`[Popup] PING attempt ${i + 1} failed:`, err.message);
+      
+      // Content script not responding, try to inject it
+      if (i === 0) {
+        try {
+          console.log("[Popup] Injecting content script...");
+          await chrome.scripting.executeScript({
+            target: { tabId },
+            files: ["content.js"]
+          });
+          console.log("[Popup] Content script injected");
+          await new Promise(r => setTimeout(r, 200)); // Wait for initialization
+        } catch (injectErr) {
+          console.error("[Popup] Failed to inject content script:", injectErr);
+        }
+      } else {
+        await new Promise(r => setTimeout(r, 100 * i)); // Progressive backoff
+      }
+    }
+  }
+  
+  console.log("[Popup] Content script ready (or timeout reached)");
+}
+
 async function run(mode, text) {
   setStatus("Working…");
+  console.log("[Popup] Starting run, mode:", mode, "text length:", text.length);
+  
   try {
+    console.log("[Popup] Calling service worker...");
     const resp = await callServiceWorker(mode, text);
+    console.log("[Popup] Service worker response:", resp);
+    
     if (!resp?.ok) throw new Error(resp?.error || "Unknown error");
 
     const tab = await getActiveTab();
     if (!canScriptInto(tab)) {
-      // Fall back: show a friendly message when we can’t inject the overlay.
-      setStatus("Result ready — open a regular webpage and try again.");
+      // Fall back: show a friendly message when we can't inject the overlay.
+      setStatus("Result ready — open a regular webpage and try again.", "error");
       return;
     }
 
-    chrome.tabs.sendMessage(tab.id, {
-      type: "NDH_SHOW_RESULT",
-      data: resp.payload,
-      settings: resp.settings,
-      mode,
-    });
-
-    setStatus("Done ✓");
-    setTimeout(() => setStatus(""), 1200);
+    console.log("[Popup] Sending message to content script on tab:", tab.id);
+    
+    // Try to send message directly - the content script should already be loaded from manifest
+    let messageSent = false;
+    
+    try {
+      await new Promise((resolve, reject) => {
+        chrome.tabs.sendMessage(tab.id, {
+          type: "NDH_SHOW_RESULT",
+          data: resp.payload,
+          settings: resp.settings,
+          mode,
+        }, (response) => {
+          if (chrome.runtime.lastError) {
+            console.log("[Popup] First attempt failed, trying to inject content script:", chrome.runtime.lastError.message);
+            reject(chrome.runtime.lastError);
+          } else {
+            console.log("[Popup] Message sent successfully!");
+            messageSent = true;
+            resolve();
+          }
+        });
+      });
+    } catch (firstError) {
+      // Content script not loaded, inject it manually
+      console.log("[Popup] Injecting content script...");
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ["content.js"]
+        });
+        
+        // Wait a moment for it to load
+        await new Promise(r => setTimeout(r, 300));
+        
+        // Try sending the message again
+        await new Promise((resolve, reject) => {
+          chrome.tabs.sendMessage(tab.id, {
+            type: "NDH_SHOW_RESULT",
+            data: resp.payload,
+            settings: resp.settings,
+            mode,
+          }, (response) => {
+            if (chrome.runtime.lastError) {
+              reject(chrome.runtime.lastError);
+            } else {
+              console.log("[Popup] Message sent after injection!");
+              messageSent = true;
+              resolve();
+            }
+          });
+        });
+      } catch (injectError) {
+        console.error("[Popup] Failed to inject/send:", injectError);
+        throw new Error("Could not display result. Try refreshing the page.");
+      }
+    }
+    
+    if (messageSent) {
+      setStatus("Done ✓", "success");
+      setTimeout(() => setStatus(""), 1500);
+    }
   } catch (e) {
-    setStatus(e.message || "Error");
+    console.error("[Popup] Error:", e);
+    setStatus(e.message || "Error", "error");
+    setTimeout(() => setStatus(""), 3000);
   }
 }
 

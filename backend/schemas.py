@@ -18,6 +18,11 @@ class ProcessResponse(BaseModel):
     simplify: Optional[str] = None
     summarize: Optional[str] = None
     analyze: Optional[str] = None
+    model: Optional[str] = None
+    tokens: Optional[int] = None
+    chunks: Optional[int] = None
+    cached: Optional[bool] = None
+    prompt: Optional[str] = None  # The prompt sent to the AI model
     model: str
     tokens: Optional[int] = None
     chunks: Optional[int] = None

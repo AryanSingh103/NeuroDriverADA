@@ -29,20 +29,43 @@ async function callAPI(mode, text, options) {
   const key = await sha256(JSON.stringify(payload));
 
   const cache = await chrome.storage.local.get([key]);
-  if (cache[key]) return { ...cache[key], cached: true };
-
-  const res = await fetch(API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
-    body: JSON.stringify(payload)
-  });
-  if (!res.ok) {
-    const msg = await res.text().catch(() => res.statusText);
-    throw new Error(`API ${res.status} ${msg}`);
+  if (cache[key]) {
+    console.log("[Service Worker] Using cached result");
+    return { ...cache[key], cached: true };
   }
-  const data = await res.json();
-  await chrome.storage.local.set({ [key]: data });
-  return data;
+
+  console.log("[Service Worker] Making fetch request to:", API_URL);
+  
+  // Add timeout to fetch (60 seconds for HuggingFace cold starts)
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000);
+  
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!res.ok) {
+      const msg = await res.text().catch(() => res.statusText);
+      throw new Error(`API ${res.status} ${msg}`);
+    }
+    
+    const data = await res.json();
+    console.log("[Service Worker] API response received, caching...");
+    await chrome.storage.local.set({ [key]: data });
+    return data;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('Request timed out after 60 seconds. The AI models may be loading.');
+    }
+    throw error;
+  }
 }
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -71,31 +94,40 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 });
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  // Always keep the port open for async work
-  let replied = false;
-  const safeSend = (payload) => {
-    if (!replied) { replied = true; sendResponse(payload); }
-  };
+  console.log("[Service Worker] onMessage listener triggered, msg:", msg);
+  
+  // Handle async work
+  if (msg.type === "NDH_PROCESS_TEXT") {
+    (async () => {
+      try {
+        console.log("[Service Worker] Processing text, mode:", msg.mode);
+        const settings = await getSettings();
+        const payloadOpts = {
+          reading_level: settings.readingLevel,
+          bullets: !!settings.bullets,
+          audience: settings.audience || "general",
+        };
+        if (settings.simplifierModel) payloadOpts.simplifier_model = settings.simplifierModel;
+        if (settings.summarizerModel) payloadOpts.summarizer_model = settings.summarizerModel;
 
-  (async () => {
-    if (msg.type !== "NDH_PROCESS_TEXT") return safeSend({ ok: false, error: "Unknown message type" });
-
-    try {
-      const settings = await getSettings();
-      const payloadOpts = {
-        reading_level: settings.readingLevel,
-        bullets: !!settings.bullets,
-        audience: settings.audience || "general",
-      };
-      if (settings.simplifierModel) payloadOpts.simplifier_model = settings.simplifierModel;
-      if (settings.summarizerModel) payloadOpts.summarizer_model = settings.summarizerModel;
-
-      const payload = await callAPI(msg.mode, msg.text, payloadOpts);
-      safeSend({ ok: true, payload, settings });
-    } catch (e) {
-      safeSend({ ok: false, error: e?.message || String(e) });
-    }
-  })();
-
-  return true; // IMPORTANT: keep channel open for async sendResponse
+        console.log("[Service Worker] Calling API with options:", payloadOpts);
+        const payload = await callAPI(msg.mode, msg.text, payloadOpts);
+        console.log("[Service Worker] API call successful, payload:", payload);
+        
+        const response = { ok: true, payload, settings };
+        console.log("[Service Worker] About to send response:", response);
+        sendResponse(response);
+        console.log("[Service Worker] sendResponse called!");
+      } catch (e) {
+        console.error("[Service Worker] Error:", e);
+        sendResponse({ ok: false, error: e?.message || String(e) });
+      }
+    })();
+    
+    return true; // Keep channel open for async response
+  }
+  
+  // Unknown message type
+  console.warn("[Service Worker] Unknown message type:", msg.type);
+  return false;
 });

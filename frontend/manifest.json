@@ -7,9 +7,7 @@
   "background": { "service_worker": "service_worker.js" },
   "permissions": ["storage", "contextMenus", "activeTab", "scripting", "tabs"],
   "host_permissions": [
-    "http://localhost:8000/*",
-    "http://127.0.0.1:8000/*"
-    
+    "<all_urls>"
   ],
   "options_page": "options.html",
   "content_scripts": [

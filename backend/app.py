@@ -1,8 +1,10 @@
 # app.py
 from __future__ import annotations
 
+import os
 from typing import Any, Dict, List
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -11,9 +13,13 @@ from hf_client import call_hf
 from utils import chunk_text, memoize_response
 from prompts import make_prompt
 
+# Load environment variables from .env file
+load_dotenv()
+
 # ======= HARD-CODED CONFIG (from your message) =======
 
 API_KEY = "460975e97dbaee9cf9719e0a57f706a47c6377aca6083e6641077188e64d97c9"
+HF_API_KEY = os.getenv("HF_API_KEY", "")  # Load from environment
 
 ALLOWED_ORIGINS = [
     "chrome-extension://eeblnbclbapkecjljnlfjgcfhcikhhgk",
@@ -90,12 +96,16 @@ async def process(req: ProcessRequest) -> ProcessResponse:
     pieces = chunk_text(req.text, CHUNK_SIZE)
     outputs: List[str] = []
     actual_model_used: str | None = None
+    first_prompt: str | None = None  # Store the first prompt for debugging
 
     for p in pieces:
         prompt = make_prompt(req.mode, p, req.options, preferred_models=model_candidates)
+        if first_prompt is None:
+            first_prompt = prompt  # Save the first prompt
         out, used = call_hf(
             models=model_candidates,
             prompt=prompt,
+            api_key=HF_API_KEY,
             timeout=HF_TIMEOUT,
             retries=HF_RETRIES,
         )
@@ -109,6 +119,7 @@ async def process(req: ProcessRequest) -> ProcessResponse:
         "model": actual_model_used or model_candidates[0],
         "tokens": None,
         "chunks": len(pieces),
+        "prompt": first_prompt,  # Include the prompt in the response
     }
     payload[req.mode] = joined
 
