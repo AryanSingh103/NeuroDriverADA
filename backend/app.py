@@ -75,6 +75,11 @@ def health():
         "elevenlabs": bool(ELEVENLABS_API_KEY),
     }
 
+@app.options("/tts")
+async def tts_options():
+    """Handle CORS preflight for TTS endpoint"""
+    return {"ok": True}
+
 @app.post("/tts", dependencies=[Depends(require_api_key)])
 async def text_to_speech(req: TTSRequest):
     """
