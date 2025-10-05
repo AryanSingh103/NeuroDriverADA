@@ -1,13 +1,24 @@
+# schemas.py
+from __future__ import annotations
+from typing import Optional
 from pydantic import BaseModel, Field
-from typing import Literal, Optional, List, Dict, Any
 
-class ProcessIn(BaseModel):
-    mode: Literal["simplify", "summarize"]
-    text: str = Field(min_length=1, max_length=200000)  # app will also enforce MAX_BODY_BYTES
-    options: Optional[Dict[str, Any]] = None  # e.g. {"reading_level":"8th grade","bullets":True}
+class ProcessOptions(BaseModel):
+    reading_level: Optional[str] = Field(default=None)
+    bullets: Optional[bool] = Field(default=None)
+    audience: Optional[str] = Field(default=None)
 
-class ProcessOut(BaseModel):
+class ProcessRequest(BaseModel):
+    mode: str = Field(pattern="^(simplify|summarize|analyze)$")
+    text: str
+    options: Optional[ProcessOptions] = None
+
+class ProcessResponse(BaseModel):
     output: str
+    simplify: Optional[str] = None
+    summarize: Optional[str] = None
+    analyze: Optional[str] = None
     model: str
-    cached: bool = False
-    chunks: Optional[List[str]] = None
+    tokens: Optional[int] = None
+    chunks: Optional[int] = None
+    cached: Optional[bool] = None
