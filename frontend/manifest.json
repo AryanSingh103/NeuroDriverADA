@@ -1,11 +1,11 @@
 {
   "manifest_version": 3,
   "name": "NeuroDrive Helper",
-  "version": "0.1.0",
-  "description": "Simplify & summarize selected text with dyslexia-friendly overlay, focus mode, and TTS.",
+  "version": "0.1.2",
+  "description": "Simplify & summarize web text with a dyslexia-friendly overlay.",
   "action": { "default_popup": "popup.html" },
   "background": { "service_worker": "service_worker.js" },
-  "permissions": ["storage", "contextMenus", "activeTab", "scripting"],
+  "permissions": ["storage", "contextMenus", "activeTab", "scripting", "tabs"],
   "host_permissions": [
     "http://localhost:8000/*",
     "http://127.0.0.1:8000/*"

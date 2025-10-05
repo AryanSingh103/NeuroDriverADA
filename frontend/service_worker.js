@@ -1,8 +1,7 @@
-// ---- CONFIG: set these for dev and later for prod ----
-const API_URL = "http://localhost:8001/process"; // swap to prod later
-const API_KEY = "460975e97dbaee9cf9719e0a57f706a47c6377aca6083e6641077188e64d97c9";     // must match backend
+// ==== CONFIG (dev) ====
+const API_URL = "http://localhost:8000/process";  // <- 8000
+const API_KEY = "460975e97dbaee9cf9719e0a57f706a47c6377aca6083e6641077188e64d97c9"; // keep in sync with backend
 
-// Simple stable hash (for caching identical requests)
 async function sha256(text) {
   const msgUint8 = new TextEncoder().encode(text);
   const hashBuffer = await crypto.subtle.digest("SHA-256", msgUint8);
@@ -13,6 +12,7 @@ async function sha256(text) {
 async function getSettings() {
   const defaults = {
     readingLevel: "8th grade",
+    audience: "general",
     bullets: true,
     dyslexia: true,
     highContrast: true,
@@ -27,9 +27,9 @@ async function getSettings() {
 async function callAPI(mode, text, options) {
   const payload = { mode, text, options };
   const key = await sha256(JSON.stringify(payload));
-  // Check client cache first
-  const cacheHit = await chrome.storage.local.get([key]);
-  if (cacheHit[key]) return { ...cacheHit[key], cached: true };
+
+  const cache = await chrome.storage.local.get([key]);
+  if (cache[key]) return { ...cache[key], cached: true };
 
   const res = await fetch(API_URL, {
     method: "POST",
@@ -37,30 +37,19 @@ async function callAPI(mode, text, options) {
     body: JSON.stringify(payload)
   });
   if (!res.ok) {
-    const detail = await res.text().catch(() => res.statusText);
-    throw new Error(`API ${res.status} ${detail}`);
+    const msg = await res.text().catch(() => res.statusText);
+    throw new Error(`API ${res.status} ${msg}`);
   }
   const data = await res.json();
-  // Store in local cache
   await chrome.storage.local.set({ [key]: data });
   return data;
 }
 
-// Context menus on first install/update
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({
-    id: "ndh_simplify",
-    title: "Simplify with NeuroDrive",
-    contexts: ["selection"]
-  });
-  chrome.contextMenus.create({
-    id: "ndh_summarize",
-    title: "Summarize with NeuroDrive",
-    contexts: ["selection"]
-  });
+  chrome.contextMenus.create({ id: "ndh_simplify", title: "Simplify with NeuroDrive", contexts: ["selection"] });
+  chrome.contextMenus.create({ id: "ndh_summarize", title: "Summarize with NeuroDrive", contexts: ["selection"] });
 });
 
-// Handle right-click actions
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (!info.selectionText) return;
   const settings = await getSettings();
@@ -68,7 +57,8 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   try {
     const payload = await callAPI(mode, info.selectionText, {
       reading_level: settings.readingLevel,
-      bullets: !!settings.bullets
+      bullets: !!settings.bullets,
+      audience: settings.audience || "general"
     });
     chrome.tabs.sendMessage(tab.id, { type: "NDH_SHOW_RESULT", data: payload, settings, mode });
   } catch (e) {
@@ -76,20 +66,28 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   }
 });
 
-// Allow popup.js to invoke processing for full page or selection
-chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
-  if (msg.type === "NDH_PROCESS_TEXT") {
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  // Always keep the port open for async work
+  let replied = false;
+  const safeSend = (payload) => {
+    if (!replied) { replied = true; sendResponse(payload); }
+  };
+
+  (async () => {
+    if (msg.type !== "NDH_PROCESS_TEXT") return safeSend({ ok: false, error: "Unknown message type" });
+
     try {
       const settings = await getSettings();
       const payload = await callAPI(msg.mode, msg.text, {
         reading_level: settings.readingLevel,
-        bullets: !!settings.bullets
+        bullets: !!settings.bullets,
+        audience: settings.audience || "general",
       });
-      sendResponse({ ok: true, payload, settings });
+      safeSend({ ok: true, payload, settings });
     } catch (e) {
-      sendResponse({ ok: false, error: e.message });
+      safeSend({ ok: false, error: e?.message || String(e) });
     }
-    // Indicate async response
-    return true;
-  }
+  })();
+
+  return true; // IMPORTANT: keep channel open for async sendResponse
 });

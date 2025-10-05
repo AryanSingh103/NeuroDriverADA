@@ -1,18 +1,55 @@
 <!doctype html>
-<html>
-  <head><meta charset="utf-8" /></head>
-  <body style="min-width:300px;font:14px system-ui;padding:12px;">
-    <h3 style="margin:0 0 8px;">NeuroDrive Helper</h3>
-    <div style="display:grid;gap:8px;">
-      <button id="simplify" style="padding:8px;">Simplify Selection</button>
-      <button id="summarize" style="padding:8px;">Summarize Selection</button>
-      <textarea id="manual" rows="5" placeholder="Or paste text here..." style="width:100%;"></textarea>
-      <div style="display:flex;gap:8px;">
-        <button id="simplifyManual" style="padding:8px;">Simplify</button>
-        <button id="summarizeManual" style="padding:8px;">Summarize</button>
-      </div>
-      <a href="options.html" target="_blank">Settings</a>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>NeuroDrive Helper</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0b0c10;--card:#111318;--text:#f5f7fb;--muted:#c5c8d0;
+      --border:#252a34;--accent:#7c5cff;--focus:#93c5fd;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0}
+    body{min-width:320px;background:var(--bg);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--text)}
+    .card{padding:14px;background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
+    h3{margin:0 0 8px;font-size:18px}
+    .stack{display:grid;gap:8px;margin-bottom:8px}
+    .btn{width:100%;background:linear-gradient(180deg,#1b1e26,#12141a);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-weight:600;cursor:pointer}
+    .btn:hover{border-color:var(--accent)}
+    .btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+    .row{display:flex;gap:8px}
+    .btn.small{padding:8px}
+    .label{display:block;font-size:12px;color:var(--muted);margin:6px 0 6px}
+    .input{width:100%;background:#0e1015;border:1px solid var(--border);border-radius:10px;color:var(--text);padding:10px 12px;resize:vertical}
+    .footer{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+    .link{color:#93c5fd;text-decoration:underline}
+    .status{font-size:12px;color:var(--muted);min-height:16px}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h3>NeuroDrive Helper</h3>
+    <div class="stack">
+      <button id="simplify" class="btn">Simplify Selection</button>
+      <button id="summarize" class="btn">Summarize Selection</button>
+      <button id="analyzePage" class="btn">Analyze Page</button>
     </div>
-    <script src="popup.js"></script>
-  </body>
+
+    <label for="manual" class="label">Or paste text here</label>
+    <textarea id="manual" rows="5" placeholder="Paste text here…" class="input"></textarea>
+
+    <div class="row" style="margin-top:8px;">
+      <button id="simplifyManual" class="btn small">Simplify</button>
+      <button id="summarizeManual" class="btn small">Summarize</button>
+    </div>
+
+    <div class="footer">
+      <a href="options.html" target="_blank" class="link">Settings</a>
+      <div id="ndhStatus" class="status" aria-live="polite"></div>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
 </html>

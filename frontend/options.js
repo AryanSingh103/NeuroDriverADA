@@ -1,4 +1,4 @@
-const fields = ["readingLevel","bullets","dyslexia","highContrast","spacing","ttsRate","focusMask"];
+const fields = ["readingLevel","bullets","dyslexia","highContrast","spacing","ttsRate","focusMask","audience"];
 
 async function load() {
   const defaults = { readingLevel: "8th grade", bullets: true, dyslexia: true, highContrast: true, spacing: true, ttsRate: 0.95, focusMask: true };
@@ -6,6 +6,7 @@ async function load() {
   const cfg = { ...defaults, ...stored };
 
   document.getElementById("readingLevel").value = cfg.readingLevel;
+  document.getElementById("audience").value = cfg.audience || 'general';
   document.getElementById("bullets").checked = !!cfg.bullets;
   document.getElementById("dyslexia").checked = !!cfg.dyslexia;
   document.getElementById("highContrast").checked = !!cfg.highContrast;
@@ -17,6 +18,7 @@ async function load() {
 async function save() {
   const cfg = {
     readingLevel: document.getElementById("readingLevel").value,
+    audience: document.getElementById("audience").value || 'general',
     bullets: document.getElementById("bullets").checked,
     dyslexia: document.getElementById("dyslexia").checked,
     highContrast: document.getElementById("highContrast").checked,
