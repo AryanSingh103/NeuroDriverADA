@@ -257,12 +257,6 @@ function ensureOverlay() {
       }, 2000);
     }
   };
-      setTimeout(() => {
-        btn.textContent = "🔊 Read Aloud";
-        btn.disabled = false;
-      }, 2000);
-    }
-  };
 
   return host;
 }
