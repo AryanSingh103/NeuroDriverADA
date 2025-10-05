@@ -1,7 +1,7 @@
-const fields = ["readingLevel","bullets","dyslexia","highContrast","spacing","ttsRate","focusMask","audience","simplifierModel","summarizerModel"];
+const fields = ["readingLevel","bullets","dyslexia","highContrast","spacing","ttsRate","focusMask","audience","simplifierModel","summarizerModel","distractionReducer"];
 
 async function load() {
-  const defaults = { readingLevel: "8th grade", bullets: true, dyslexia: true, highContrast: true, spacing: true, ttsRate: 0.95, focusMask: true };
+  const defaults = { readingLevel: "8th grade", bullets: true, dyslexia: true, highContrast: true, spacing: true, ttsRate: 0.95, focusMask: true, distractionReducer: false };
   const stored = await chrome.storage.sync.get(fields);
   const cfg = { ...defaults, ...stored };
 
@@ -14,6 +14,7 @@ async function load() {
   document.getElementById("highContrast").checked = !!cfg.highContrast;
   document.getElementById("spacing").checked = !!cfg.spacing;
   document.getElementById("focusMask").checked = !!cfg.focusMask;
+  document.getElementById("distractionReducer").checked = !!cfg.distractionReducer;
   document.getElementById("ttsRate").value = cfg.ttsRate;
 }
 
@@ -28,9 +29,20 @@ async function save() {
     highContrast: document.getElementById("highContrast").checked,
     spacing: document.getElementById("spacing").checked,
     focusMask: document.getElementById("focusMask").checked,
+    distractionReducer: document.getElementById("distractionReducer").checked,
     ttsRate: parseFloat(document.getElementById("ttsRate").value || "0.95")
   };
   await chrome.storage.sync.set(cfg);
+  
+  // Apply distraction reducer immediately to all tabs
+  const tabs = await chrome.tabs.query({});
+  tabs.forEach(tab => {
+    chrome.tabs.sendMessage(tab.id, { 
+      type: 'APPLY_DISTRACTION_REDUCER', 
+      enabled: cfg.distractionReducer 
+    }).catch(() => {}); // Ignore errors for tabs without content script
+  });
+  
   const status = document.getElementById("status");
   status.textContent = "Saved ✓";
   setTimeout(() => (status.textContent = ""), 1200);

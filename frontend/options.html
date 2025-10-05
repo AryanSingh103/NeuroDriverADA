@@ -1,40 +1,181 @@
 <!doctype html>
-<html>
-<head><meta charset="utf-8" /></head>
-<body style="font:14px system-ui;padding:16px;max-width:560px;margin:auto;">
-  <h2>NeuroDrive Settings</h2>
-  <label>Reading level:
-    <select id="readingLevel">
-      <option>6th grade</option>
-      <option selected>8th grade</option>
-      <option>10th grade</option>
-    </select>
-  </label>
-  <br><br>
-  <label>Audience:
-    <select id="audience">
-      <option value="general" selected>General</option>
-      <option value="medical">Medical</option>
-    </select>
-  </label>
-  <br><br>
-  <label>Custom simplifier model:
-    <input id="simplifierModel" type="text" placeholder="e.g. google/flan-t5-base" style="width:100%" />
-  </label>
-  <br><br>
-  <label>Custom summarizer model:
-    <input id="summarizerModel" type="text" placeholder="e.g. google/flan-t5-base" style="width:100%" />
-  </label>
-  <br><br>
-  <label><input type="checkbox" id="bullets" checked /> Summaries as bullets</label><br>
-  <label><input type="checkbox" id="dyslexia" checked /> Dyslexia-friendly font</label><br>
-  <label><input type="checkbox" id="highContrast" checked /> High contrast card</label><br>
-  <label><input type="checkbox" id="spacing" checked /> Extra spacing</label><br>
-  <label><input type="checkbox" id="focusMask" checked /> Dim background (focus mode)</label><br>
-  <label>TTS rate: <input type="number" id="ttsRate" min="0.5" max="1.5" step="0.05" value="0.95" /></label>
-  <br><br>
-  <button id="save">Save</button>
-  <span id="status" style="margin-left:8px;"></span>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>NeuroDrive Settings</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0b0c10;--card:#111318;--text:#f5f7fb;--muted:#c5c8d0;
+      --border:#252a34;--accent:#7c5cff;--focus:#93c5fd;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0}
+    body{
+      background:var(--bg);
+      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      color:var(--text);
+      padding:24px;
+      min-height:100vh;
+    }
+    .container{
+      max-width:600px;
+      margin:0 auto;
+    }
+    h2{
+      font-size:28px;
+      font-weight:700;
+      margin:0 0 24px 0;
+      background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+      background-clip:text;
+    }
+    .section{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:20px;
+      margin-bottom:16px;
+      box-shadow:0 12px 30px rgba(0,0,0,.25);
+    }
+    .section h3{
+      font-size:16px;
+      font-weight:700;
+      margin:0 0 16px 0;
+      color:var(--accent);
+      border-bottom:1px solid var(--border);
+      padding-bottom:8px;
+    }
+    label{
+      display:block;
+      margin-bottom:12px;
+      color:var(--text);
+      font-size:14px;
+    }
+    select, input[type="text"], input[type="number"]{
+      background:#0e1015;
+      border:1px solid var(--border);
+      border-radius:10px;
+      color:var(--text);
+      padding:10px 12px;
+      font-size:14px;
+      font-family:inherit;
+      transition:all 0.2s ease;
+      margin-top:4px;
+    }
+    select:focus, input[type="text"]:focus, input[type="number"]:focus{
+      outline:none;
+      border-color:var(--accent);
+      box-shadow:0 0 0 3px rgba(124,92,255,0.1);
+    }
+    input[type="text"]{
+      width:100%;
+    }
+    input[type="number"]{
+      width:100px;
+    }
+    input[type="checkbox"]{
+      margin-right:8px;
+      cursor:pointer;
+      width:16px;
+      height:16px;
+      accent-color:var(--accent);
+    }
+    .btn{
+      background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color:#fff;
+      border:none;
+      border-radius:10px;
+      padding:12px 24px;
+      font-size:14px;
+      font-weight:600;
+      cursor:pointer;
+      transition:all 0.2s ease;
+      box-shadow:0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+    .btn:hover{
+      transform:translateY(-2px);
+      box-shadow:0 6px 16px rgba(102, 126, 234, 0.4);
+    }
+    .btn:active{
+      transform:translateY(0);
+    }
+    #status{
+      margin-left:12px;
+      color:#10b981;
+      font-weight:600;
+      font-size:14px;
+    }
+    .footer{
+      margin-top:24px;
+      text-align:center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>🧠 NeuroDrive Settings</h2>
+    
+    <div class="section">
+      <h3>📚 Reading Preferences</h3>
+      <label>
+        Reading level:
+        <select id="readingLevel">
+          <option>6th grade</option>
+          <option selected>8th grade</option>
+          <option>10th grade</option>
+        </select>
+      </label>
+      <label>
+        Audience:
+        <select id="audience">
+          <option value="general" selected>General</option>
+          <option value="medical">Medical</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="section">
+      <h3>🎨 Display & Accessibility</h3>
+      <label><input type="checkbox" id="dyslexia" checked /> Dyslexia-friendly font</label>
+      <label><input type="checkbox" id="highContrast" checked /> High contrast card</label>
+      <label><input type="checkbox" id="spacing" checked /> Extra spacing</label>
+      <label><input type="checkbox" id="focusMask" checked /> Dim background (focus mode)</label>
+      <label><input type="checkbox" id="distractionReducer" /> 🎯 Distraction Reducer (blur images/videos/ads)</label>
+    </div>
+
+    <div class="section">
+      <h3>📝 Summary Options</h3>
+      <label><input type="checkbox" id="bullets" checked /> Summaries as bullets</label>
+    </div>
+
+    <div class="section">
+      <h3>🔊 Text-to-Speech</h3>
+      <label>
+        TTS rate:
+        <input type="number" id="ttsRate" min="0.5" max="1.5" step="0.05" value="0.95" />
+      </label>
+    </div>
+
+    <div class="section">
+      <h3>⚙️ Advanced</h3>
+      <label>
+        Custom simplifier model:
+        <input id="simplifierModel" type="text" placeholder="e.g. google/flan-t5-base" />
+      </label>
+      <label>
+        Custom summarizer model:
+        <input id="summarizerModel" type="text" placeholder="e.g. google/flan-t5-base" />
+      </label>
+    </div>
+
+    <div class="footer">
+      <button id="save" class="btn">Save Settings</button>
+      <span id="status"></span>
+    </div>
+  </div>
 
   <script src="options.js"></script>
 </body>

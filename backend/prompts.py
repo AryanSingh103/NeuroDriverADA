@@ -25,36 +25,24 @@ def make_prompt(
         return text
 
     if mode == "analyze":
-        # Generate a neurodiverse accessibility report
-        prompt = f"""Analyze this text for accessibility and create a report with these sections:
-
-READING LEVEL: Estimate grade level (e.g., "10th grade") and recommend simpler level if needed
-COMPLEXITY: Rate 1-10 and note if text is dense or clear
-TIME TO READ: Estimate in minutes
-
-ATTENTION POINTS (for ADHD readers):
-- List long sentences (>25 words)
-- Note complex jargon or medical terms
-- Suggest which sections to simplify
-
-STRENGTHS:
-- What makes this text accessible
-- Good formatting or structure
-
-KEY TAKEAWAYS:
-- List 3-5 main points in simple language
-
-MAIN ACTION:
-- What does this page want the reader to know or do?
-
-Text to analyze:
-{text}
-
-Generate the accessibility report:"""
-        
+        # For T5 models, use simple summarize
         if use_t5_prefix:
-            # T5 models need simpler prompts
             return f"summarize: {text}"
+        
+        # For BART models, use minimal prompt - they work better with less instruction
+        prompt = f"""Create an accessibility report for neurodiverse readers:
+
+READING LEVEL: [Grade level and recommendation]
+COMPLEXITY: [Score 1-10 and explanation]
+TIME TO READ: [Minutes]
+ATTENTION POINTS: [Long sentences or difficult terms for ADHD readers]
+DYSLEXIA NOTES: [Difficult words or formatting issues]
+STRENGTHS: [What's accessible about this text]
+KEY POINTS: [3-5 main takeaways]
+MAIN ACTION: [What should readers know or do]
+
+Text:
+{text}"""
         
         return prompt
 

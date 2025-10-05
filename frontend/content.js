@@ -1,3 +1,38 @@
+// Apply distraction reducer
+async function applyDistractionReducer() {
+  const { distractionReducer } = await chrome.storage.sync.get(['distractionReducer']);
+  
+  let style = document.getElementById('ndh-distraction-reducer');
+  if (style) {
+    style.remove();
+  }
+  
+  if (!distractionReducer) return;
+  
+  style = document.createElement('style');
+  style.id = 'ndh-distraction-reducer';
+  style.textContent = `
+    img:not([alt]), video, iframe:not([title]), 
+    .ad, .advertisement, [class*="banner"],
+    [class*="sidebar"], [class*="promoted"] {
+      filter: blur(8px) grayscale(1) opacity(0.3) !important;
+      transition: filter 0.3s ease !important;
+    }
+    img:not([alt]):hover, video:hover, iframe:not([title]):hover {
+      filter: blur(0) grayscale(0) opacity(1) !important;
+    }
+    /* Disable animations for focus */
+    * {
+      animation-duration: 0.01s !important;
+      transition-duration: 0.01s !important;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+// Apply on page load
+applyDistractionReducer();
+
 // Creates a shadow-DOM overlay so we don't disturb page styles
 function ensureOverlay() {
   let host = document.getElementById("__ndh_overlay");
@@ -185,7 +220,6 @@ function ensureOverlay() {
         <div class="controls">
           <button id="tts" class="btn">🔊 Read Aloud</button>
           <button id="copy" class="btn secondary">📋 Copy</button>
-          <button id="viewPrompt" class="btn secondary">📝 View Prompt</button>
           <button id="close" class="btn secondary">✕ Close</button>
         </div>
       </div>
@@ -200,35 +234,6 @@ function ensureOverlay() {
   $("#copy").onclick = async () => {
     const text = $("#out").innerText;
     try { await navigator.clipboard.writeText(text); $("#copy").innerText = "✅ Copied"; setTimeout(()=>$("#copy").innerText="📋 Copy",1200);} catch {}
-  };
-  $("#viewPrompt").onclick = () => {
-    const prompt = host.dataset.prompt || "No prompt available";
-    // Create a modal-like display for the prompt
-    const promptOverlay = document.createElement("div");
-    promptOverlay.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:2147483646;display:flex;align-items:center;justify-content:center;padding:20px;";
-    
-    const promptBox = document.createElement("div");
-    promptBox.style.cssText = "background:#1e1e2e;color:#fff;padding:30px;border-radius:12px;max-width:800px;max-height:80vh;overflow:auto;font-family:monospace;font-size:14px;line-height:1.6;box-shadow:0 20px 60px rgba(0,0,0,0.6);";
-    
-    const title = document.createElement("h3");
-    title.textContent = "📝 Prompt Sent to AI";
-    title.style.cssText = "margin:0 0 15px 0;color:#a78bfa;";
-    
-    const pre = document.createElement("pre");
-    pre.textContent = prompt;
-    pre.style.cssText = "margin:0;white-space:pre-wrap;word-wrap:break-word;";
-    
-    const closeBtn = document.createElement("button");
-    closeBtn.textContent = "✕ Close";
-    closeBtn.style.cssText = "margin-top:20px;padding:10px 20px;background:#7c5cff;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;";
-    closeBtn.onclick = () => promptOverlay.remove();
-    
-    promptBox.appendChild(title);
-    promptBox.appendChild(pre);
-    promptBox.appendChild(closeBtn);
-    promptOverlay.appendChild(promptBox);
-    promptOverlay.onclick = (e) => { if(e.target === promptOverlay) promptOverlay.remove(); };
-    document.body.appendChild(promptOverlay);
   };
   $("#tts").onclick = async () => {
     const text = $("#out").innerText;
@@ -438,6 +443,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     // Respond to ping to confirm content script is loaded
     console.log("[Content Script] Received PING, responding...");
     sendResponse({ pong: true });
+    return true;
+  }
+  if (msg.type === "APPLY_DISTRACTION_REDUCER") {
+    // Apply distraction reducer when settings change
+    applyDistractionReducer();
     return true;
   }
 });
