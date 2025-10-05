@@ -21,13 +21,13 @@ def make_prompt(
     if mode == "simplify":
         if use_t5_prefix:
             return f"paraphrase: {text}"
-        # Pegasus and BART work best with just the text for paraphrasing
+        # Pegasus paraphrase works best with just the text
         return text
 
     if mode == "analyze":
         if use_t5_prefix:
             return f"summarize: {text}"
-        # For analysis, just summarize - BART is trained for this
+        # BART works best with just the text for analysis
         return text
 
     # summarize

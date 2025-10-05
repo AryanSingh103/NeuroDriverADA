@@ -82,18 +82,20 @@ async def text_to_speech(req: TTSRequest):
         raise HTTPException(status_code=500, detail="ElevenLabs API key not configured")
     
     try:
-        from elevenlabs import generate, Voice
+        from elevenlabs.client import ElevenLabs
+        
+        # Initialize ElevenLabs client
+        client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
         
         # Generate audio using ElevenLabs
-        audio = generate(
+        audio = client.generate(
             text=req.text,
-            voice=Voice(voice_id=req.voice_id),
-            api_key=ELEVENLABS_API_KEY,
+            voice=req.voice_id,
             model="eleven_monolingual_v1"  # Fast and efficient
         )
         
         # Convert generator to bytes
-        audio_bytes = b"".join(audio) if hasattr(audio, '__iter__') else audio
+        audio_bytes = b"".join(audio)
         
         return Response(
             content=audio_bytes,
