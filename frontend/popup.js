@@ -53,14 +53,14 @@ async function getPageText(tabId) {
   });
 }
 
-function callServiceWorker(mode, text, timeoutMs = 65000) {
+function callServiceWorker(mode, text, timeoutMs = 185000) {
   return new Promise((resolve) => {
     let done = false;
 
     const timer = setTimeout(() => {
       if (!done) {
         done = true;
-        resolve({ ok: false, error: "Request timed out after 65 seconds. The AI models may be loading or the backend is slow. Try again in a moment." });
+        resolve({ ok: false, error: "Request timed out after 3 minutes. The AI models may be very slow. Please try again or wait a bit longer." });
       }
     }, timeoutMs);
 

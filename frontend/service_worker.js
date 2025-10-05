@@ -14,11 +14,11 @@ async function getSettings() {
     readingLevel: "8th grade",
     audience: "general",
     bullets: true,
-    dyslexia: true,
-    highContrast: true,
-    spacing: true,
+    dyslexia: false,
+    highContrast: false,
+    spacing: false,
     ttsRate: 0.95,
-    focusMask: true
+    focusMask: false
   };
   const stored = await chrome.storage.sync.get(Object.keys(defaults));
   return { ...defaults, ...stored };
@@ -36,9 +36,9 @@ async function callAPI(mode, text, options) {
 
   console.log("[Service Worker] Making fetch request to:", API_URL);
   
-  // Add timeout to fetch (60 seconds for HuggingFace cold starts)
+  // Add timeout to fetch (180 seconds for HuggingFace cold starts)
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 60000);
+  const timeoutId = setTimeout(() => controller.abort(), 180000);
   
   try {
     const res = await fetch(API_URL, {
@@ -62,7 +62,7 @@ async function callAPI(mode, text, options) {
   } catch (error) {
     clearTimeout(timeoutId);
     if (error.name === 'AbortError') {
-      throw new Error('Request timed out after 60 seconds. The AI models may be loading.');
+      throw new Error('Request timed out after 3 minutes. The AI models may be loading. Please try again.');
     }
     throw error;
   }

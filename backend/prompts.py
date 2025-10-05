@@ -20,33 +20,18 @@ def make_prompt(
 
     if mode == "simplify":
         if use_t5_prefix:
-            return f"paraphrase: simplify for {level} and {audience}. {'Use bullet points.' if bullets else 'Use short sentences.'} {text}"
-        return (
-            f"Simplify the following text for a {level} reader and a {audience} audience. "
-            f"Use short, concrete sentences and plain words. "
-            f"{'Output concise bullet points.' if bullets else 'Output a short paragraph.'}\n\n"
-            f"Text:\n{text}"
-        )
+            return f"paraphrase: {text}"
+        # Pegasus and BART work best with just the text for paraphrasing
+        return text
 
     if mode == "analyze":
         if use_t5_prefix:
-            return (
-                f"summarize: {text}\n\n"
-                f"Then provide 2-3 study tips for attention support at a {level} level for a {audience} audience."
-                f"{' Use bullet points.' if bullets else ' Use a short paragraph.'}"
-            )
-        return (
-            f"Summarize the key points for a {level} reader and a {audience} audience. "
-            f"Then add 2-3 focus-friendly study tips. "
-            f"{'Use bullet points.' if bullets else 'Use a short paragraph.'}\n\n"
-            f"Text:\n{text}"
-        )
+            return f"summarize: {text}"
+        # For analysis, just summarize - BART is trained for this
+        return text
 
     # summarize
     if use_t5_prefix:
-        return f"summarize: {text} {' Use bullet points.' if bullets else ' Use 3-4 clear sentences.'}"
-    return (
-        f"Summarize the following text for a {level} reader and a {audience} audience. "
-        f"{'Use bullet points.' if bullets else 'Use 3-4 clear sentences.'}\n\n"
-        f"Text:\n{text}"
-    )
+        return f"summarize: {text}"
+    # BART is pre-trained for summarization - just give it the text
+    return text

@@ -27,8 +27,8 @@ ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
 ]
 
-SIMPLIFIER_MODEL = "google/flan-t5-base"
-SUMMARIZER_MODEL = "google/flan-t5-base"
+SIMPLIFIER_MODEL = os.getenv("SIMPLIFIER_MODEL", "google/flan-t5-base")
+SUMMARIZER_MODEL = os.getenv("SUMMARIZER_MODEL", "google/flan-t5-base")
 
 HF_TIMEOUT = 30
 HF_RETRIES = 3
@@ -70,19 +70,15 @@ async def process(req: ProcessRequest) -> ProcessResponse:
         raise HTTPException(status_code=413, detail=f"Payload too large ({body_bytes} bytes)")
 
     # model preference list with robust fallbacks (handles HF 404)
-        if req.mode == "simplify":
-            # Allow an optional model override from the incoming options
-            model_candidates: List[str] = [
-                opts.get("model") or opts.get("simplifier_model") or SIMPLIFIER_MODEL,
-                "t5-base",                 # widely available text2text
-                "google/flan-t5-base",     # explicit retry
-                "google/flan-t5-small",
-            ]
+    if req.mode == "simplify":
+        model_candidates: List[str] = [
+            SIMPLIFIER_MODEL,                 # tuner007/pegasus_paraphrase
+            "sshleifer/distilbart-cnn-12-6",  # Lighter/faster fallback
+        ]
     else:  # summarize / analyze
         model_candidates = [
-            SUMMARIZER_MODEL,                 # your choice (FLAN-T5)
-            "facebook/bart-large-cnn",        # reliable summarizer
-            "sshleifer/distilbart-cnn-12-6",  # lighter summarizer
+            SUMMARIZER_MODEL,                 # facebook/bart-large-cnn
+            "sshleifer/distilbart-cnn-12-6",  # Lighter/faster fallback
         ]
 
     # simple per-process memo
