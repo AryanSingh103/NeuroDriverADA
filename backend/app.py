@@ -45,10 +45,10 @@ app = FastAPI(title="NeuroDrive Helper API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
+    allow_origins=["*"],  # Allow all origins for extension to work on any website
     allow_credentials=False,
     allow_methods=["POST", "OPTIONS", "GET"],
-    allow_headers=["*", "x-api-key", "content-type"],
+    allow_headers=["*"],
     expose_headers=["*"],
     max_age=600,
 )
