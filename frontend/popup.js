@@ -247,5 +247,5 @@ document.getElementById("analyzePage").onclick = async () => {
   let text = await getSelection(tab.id);
   if (!text) text = await getPageText(tab.id);
   if (!text) return setStatus("Could not extract page text.");
-  run("summarize", text); // default behavior
+  run("analyze", text); // Use analyze mode for accessibility report
 };
