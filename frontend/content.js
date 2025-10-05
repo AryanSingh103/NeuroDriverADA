@@ -30,8 +30,83 @@ async function applyDistractionReducer() {
   document.head.appendChild(style);
 }
 
+// Apply color blindness mode
+async function applyColorBlindnessMode() {
+  const { colorBlindnessMode } = await chrome.storage.sync.get(['colorBlindnessMode']);
+  
+  let style = document.getElementById('ndh-color-blindness');
+  if (style) {
+    style.remove();
+  }
+  
+  if (!colorBlindnessMode || colorBlindnessMode === 'none') return;
+  
+  // Color blindness simulation filters based on research
+  const filters = {
+    deuteranopia: 'url(#deuteranopia-filter)',
+    protanopia: 'url(#protanopia-filter)',
+    tritanopia: 'url(#tritanopia-filter)'
+  };
+  
+  // SVG filter matrices for color blindness simulation
+  const svgFilters = {
+    deuteranopia: `
+      <svg style="display:none">
+        <defs>
+          <filter id="deuteranopia-filter">
+            <feColorMatrix type="matrix" values="0.625 0.375 0   0 0
+                                                   0.7   0.3   0   0 0
+                                                   0     0.3   0.7 0 0
+                                                   0     0     0   1 0"/>
+          </filter>
+        </defs>
+      </svg>`,
+    protanopia: `
+      <svg style="display:none">
+        <defs>
+          <filter id="protanopia-filter">
+            <feColorMatrix type="matrix" values="0.567 0.433 0     0 0
+                                                   0.558 0.442 0     0 0
+                                                   0     0.242 0.758 0 0
+                                                   0     0     0     1 0"/>
+          </filter>
+        </defs>
+      </svg>`,
+    tritanopia: `
+      <svg style="display:none">
+        <defs>
+          <filter id="tritanopia-filter">
+            <feColorMatrix type="matrix" values="0.95  0.05  0     0 0
+                                                   0     0.433 0.567 0 0
+                                                   0     0.475 0.525 0 0
+                                                   0     0     0     1 0"/>
+          </filter>
+        </defs>
+      </svg>`
+  };
+  
+  if (svgFilters[colorBlindnessMode]) {
+    // Add SVG filter to page
+    const svgContainer = document.createElement('div');
+    svgContainer.id = 'ndh-cb-svg-filter';
+    svgContainer.innerHTML = svgFilters[colorBlindnessMode];
+    document.body.appendChild(svgContainer);
+    
+    // Apply filter to entire page
+    style = document.createElement('style');
+    style.id = 'ndh-color-blindness';
+    style.textContent = `
+      html {
+        filter: ${filters[colorBlindnessMode]} !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+}
+
 // Apply on page load
 applyDistractionReducer();
+applyColorBlindnessMode();
 
 // Creates a shadow-DOM overlay so we don't disturb page styles
 function ensureOverlay() {
@@ -230,85 +305,89 @@ function ensureOverlay() {
   (document.body || document.documentElement).appendChild(host);
 
   const $ = (sel) => shadow.querySelector(sel);
-  $("#close").onclick = () => host.remove();
-  $("#copy").onclick = async () => {
+  $("#close")?.addEventListener("click", () => host.remove());
+  $("#copy")?.addEventListener("click", async () => {
     const text = $("#out").innerText;
     try { await navigator.clipboard.writeText(text); $("#copy").innerText = "✅ Copied"; setTimeout(()=>$("#copy").innerText="📋 Copy",1200);} catch {}
-  };
-  $("#tts").onclick = async () => {
-    const text = $("#out").innerText;
-    const btn = $("#tts");
-    
-    console.log("[Content Script] TTS button clicked, text length:", text.length);
-    
-    // Disable button and show loading state
-    btn.disabled = true;
-    btn.textContent = "🔊 Loading...";
-    
-    try {
-      console.log("[Content Script] Calling TTS endpoint...");
+  });
+  
+  const ttsBtn = $("#tts");
+  if (ttsBtn) {
+    ttsBtn.addEventListener("click", async () => {
+      const text = $("#out").innerText;
+      const btn = $("#tts");
       
-      // Call backend TTS endpoint
-      const response = await fetch("http://localhost:8000/tts", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": "460975e97dbaee9cf9719e0a57f706a47c6377aca6083e6641077188e64d97c9"
-        },
-        body: JSON.stringify({
-          text: text,
-          voice_id: "21m00Tcm4TlvDq8ikWAM"  // Rachel voice (clear and professional)
-        })
-      });
+      console.log("[Content Script] TTS button clicked, text length:", text.length);
       
-      console.log("[Content Script] TTS response status:", response.status);
+      // Disable button and show loading state
+      btn.disabled = true;
+      btn.textContent = "🔊 Loading...";
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("[Content Script] TTS API error:", response.status, errorText);
-        throw new Error(`TTS API error: ${response.status} - ${errorText}`);
+      try {
+        console.log("[Content Script] Calling TTS endpoint...");
+        
+        // Call backend TTS endpoint
+        const response = await fetch("http://localhost:8000/tts", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": "460975e97dbaee9cf9719e0a57f706a47c6377aca6083e6641077188e64d97c9"
+          },
+          body: JSON.stringify({
+            text: text,
+            voice_id: "21m00Tcm4TlvDq8ikWAM"  // Rachel voice (clear and professional)
+          })
+        });
+        
+        console.log("[Content Script] TTS response status:", response.status);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("[Content Script] TTS API error:", response.status, errorText);
+          throw new Error(`TTS API error: ${response.status} - ${errorText}`);
+        }
+        
+        // Get audio blob and play it
+        const audioBlob = await response.blob();
+        console.log("[Content Script] Audio blob size:", audioBlob.size, "type:", audioBlob.type);
+        
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        
+        console.log("[Content Script] Playing audio...");
+        
+        // Play audio
+        await audio.play();
+        
+        // Update button text while playing
+        btn.textContent = "🔊 Playing...";
+        
+        // Reset button when done
+        audio.onended = () => {
+          console.log("[Content Script] Audio playback finished");
+          btn.textContent = "🔊 Read Aloud";
+          btn.disabled = false;
+          URL.revokeObjectURL(audioUrl);  // Clean up
+        };
+        
+        // Handle errors during playback
+        audio.onerror = (e) => {
+          console.error("[Content Script] Audio playback error:", e);
+          btn.textContent = "🔊 Read Aloud";
+          btn.disabled = false;
+          URL.revokeObjectURL(audioUrl);
+        };
+        
+      } catch (error) {
+        console.error("[Content Script] TTS error:", error);
+        btn.textContent = "🔊 Error";
+        setTimeout(() => {
+          btn.textContent = "🔊 Read Aloud";
+          btn.disabled = false;
+        }, 2000);
       }
-      
-      // Get audio blob and play it
-      const audioBlob = await response.blob();
-      console.log("[Content Script] Audio blob size:", audioBlob.size, "type:", audioBlob.type);
-      
-      const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
-      
-      console.log("[Content Script] Playing audio...");
-      
-      // Play audio
-      await audio.play();
-      
-      // Update button text while playing
-      btn.textContent = "🔊 Playing...";
-      
-      // Reset button when done
-      audio.onended = () => {
-        console.log("[Content Script] Audio playback finished");
-        btn.textContent = "🔊 Read Aloud";
-        btn.disabled = false;
-        URL.revokeObjectURL(audioUrl);  // Clean up
-      };
-      
-      // Handle errors during playback
-      audio.onerror = (e) => {
-        console.error("[Content Script] Audio playback error:", e);
-        btn.textContent = "🔊 Read Aloud";
-        btn.disabled = false;
-        URL.revokeObjectURL(audioUrl);
-      };
-      
-    } catch (error) {
-      console.error("[Content Script] TTS error:", error);
-      btn.textContent = "🔊 Error";
-      setTimeout(() => {
-        btn.textContent = "🔊 Read Aloud";
-        btn.disabled = false;
-      }, 2000);
-    }
-  };
+    });
+  }
 
   return host;
 }
@@ -448,6 +527,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === "APPLY_DISTRACTION_REDUCER") {
     // Apply distraction reducer when settings change
     applyDistractionReducer();
+    return true;
+  }
+  if (msg.type === "APPLY_COLOR_BLINDNESS_MODE") {
+    // Apply color blindness mode when settings change
+    applyColorBlindnessMode();
     return true;
   }
 });

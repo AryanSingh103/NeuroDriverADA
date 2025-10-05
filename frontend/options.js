@@ -1,7 +1,7 @@
-const fields = ["readingLevel","bullets","dyslexia","highContrast","spacing","ttsRate","focusMask","audience","simplifierModel","summarizerModel","distractionReducer"];
+const fields = ["readingLevel","bullets","dyslexia","highContrast","spacing","ttsRate","focusMask","audience","simplifierModel","summarizerModel","distractionReducer","colorBlindnessMode"];
 
 async function load() {
-  const defaults = { readingLevel: "8th grade", bullets: true, dyslexia: true, highContrast: true, spacing: true, ttsRate: 0.95, focusMask: true, distractionReducer: false };
+  const defaults = { readingLevel: "8th grade", bullets: true, dyslexia: true, highContrast: true, spacing: true, ttsRate: 0.95, focusMask: true, distractionReducer: false, colorBlindnessMode: "none" };
   const stored = await chrome.storage.sync.get(fields);
   const cfg = { ...defaults, ...stored };
 
@@ -15,6 +15,7 @@ async function load() {
   document.getElementById("spacing").checked = !!cfg.spacing;
   document.getElementById("focusMask").checked = !!cfg.focusMask;
   document.getElementById("distractionReducer").checked = !!cfg.distractionReducer;
+  document.getElementById("colorBlindnessMode").value = cfg.colorBlindnessMode;
   document.getElementById("ttsRate").value = cfg.ttsRate;
 }
 
@@ -30,6 +31,7 @@ async function save() {
     spacing: document.getElementById("spacing").checked,
     focusMask: document.getElementById("focusMask").checked,
     distractionReducer: document.getElementById("distractionReducer").checked,
+    colorBlindnessMode: document.getElementById("colorBlindnessMode").value,
     ttsRate: parseFloat(document.getElementById("ttsRate").value || "0.95")
   };
   await chrome.storage.sync.set(cfg);
@@ -40,6 +42,11 @@ async function save() {
     chrome.tabs.sendMessage(tab.id, { 
       type: 'APPLY_DISTRACTION_REDUCER', 
       enabled: cfg.distractionReducer 
+    }).catch(() => {}); // Ignore errors for tabs without content script
+    
+    chrome.tabs.sendMessage(tab.id, { 
+      type: 'APPLY_COLOR_BLINDNESS_MODE', 
+      mode: cfg.colorBlindnessMode 
     }).catch(() => {}); // Ignore errors for tabs without content script
   });
   

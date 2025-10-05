@@ -1,7 +1,7 @@
 # prompts.py
 from __future__ import annotations
 from typing import List, Optional
-from backend.schemas import ProcessOptions
+from .schemas import ProcessOptions
 
 def _is_t5_family(models: List[str]) -> bool:
     m = " ".join(models).lower()
