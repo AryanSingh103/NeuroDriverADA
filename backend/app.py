@@ -11,10 +11,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel
 
-from schemas import ProcessOptions, ProcessRequest, ProcessResponse
-from hf_client import call_hf
-from utils import chunk_text, memoize_response
-from prompts import make_prompt
+from backend.schemas import ProcessOptions, ProcessRequest, ProcessResponse
+from backend.hf_client import call_hf
+from backend.utils import chunk_text, memoize_response
+from backend.prompts import make_prompt
 
 # Load environment variables from .env file
 load_dotenv()
