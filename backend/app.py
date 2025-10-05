@@ -17,13 +17,29 @@ from backend.utils import chunk_text, memoize_response
 from backend.prompts import make_prompt
 
 # Load environment variables from .env file
-load_dotenv()
+# Get the directory where this file is located (backend/)
+_current_dir = os.path.dirname(os.path.abspath(__file__))
+_env_path = os.path.join(_current_dir, ".env")
+load_dotenv(_env_path)
 
 # ======= HARD-CODED CONFIG (from your message) =======
 
 API_KEY = "460975e97dbaee9cf9719e0a57f706a47c6377aca6083e6641077188e64d97c9"
 HF_API_KEY = os.getenv("HF_API_KEY", "")  # Load from environment
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")  # ElevenLabs API key
+
+# Debug: Check if API keys are loaded
+if not HF_API_KEY:
+    print(f"WARNING: HF_API_KEY not found! .env path: {_env_path}")
+    print(f"Current directory: {os.getcwd()}")
+    print(f"File location: {__file__}")
+else:
+    print(f"✓ HF_API_KEY loaded: {HF_API_KEY[:10]}...")
+    
+if not ELEVENLABS_API_KEY:
+    print(f"WARNING: ELEVENLABS_API_KEY not found!")
+else:
+    print(f"✓ ELEVENLABS_API_KEY loaded: {ELEVENLABS_API_KEY[:10]}...")
 
 ALLOWED_ORIGINS = [
     "chrome-extension://eeblnbclbapkecjljnlfjgcfhcikhhgk",
