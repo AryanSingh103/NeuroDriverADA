@@ -64,13 +64,14 @@ async def process(req: ProcessRequest) -> ProcessResponse:
         raise HTTPException(status_code=413, detail=f"Payload too large ({body_bytes} bytes)")
 
     # model preference list with robust fallbacks (handles HF 404)
-    if req.mode == "simplify":
-        model_candidates: List[str] = [
-            SIMPLIFIER_MODEL,          # your choice (FLAN-T5)
-            "t5-base",                 # widely available text2text
-            "google/flan-t5-base",     # explicit retry
-            "google/flan-t5-small",
-        ]
+        if req.mode == "simplify":
+            # Allow an optional model override from the incoming options
+            model_candidates: List[str] = [
+                opts.get("model") or opts.get("simplifier_model") or SIMPLIFIER_MODEL,
+                "t5-base",                 # widely available text2text
+                "google/flan-t5-base",     # explicit retry
+                "google/flan-t5-small",
+            ]
     else:  # summarize / analyze
         model_candidates = [
             SUMMARIZER_MODEL,                 # your choice (FLAN-T5)

@@ -1,4 +1,4 @@
-const fields = ["readingLevel","bullets","dyslexia","highContrast","spacing","ttsRate","focusMask","audience"];
+const fields = ["readingLevel","bullets","dyslexia","highContrast","spacing","ttsRate","focusMask","audience","simplifierModel","summarizerModel"];
 
 async function load() {
   const defaults = { readingLevel: "8th grade", bullets: true, dyslexia: true, highContrast: true, spacing: true, ttsRate: 0.95, focusMask: true };
@@ -7,6 +7,8 @@ async function load() {
 
   document.getElementById("readingLevel").value = cfg.readingLevel;
   document.getElementById("audience").value = cfg.audience || 'general';
+  document.getElementById("simplifierModel").value = cfg.simplifierModel || '';
+  document.getElementById("summarizerModel").value = cfg.summarizerModel || '';
   document.getElementById("bullets").checked = !!cfg.bullets;
   document.getElementById("dyslexia").checked = !!cfg.dyslexia;
   document.getElementById("highContrast").checked = !!cfg.highContrast;
@@ -19,6 +21,8 @@ async function save() {
   const cfg = {
     readingLevel: document.getElementById("readingLevel").value,
     audience: document.getElementById("audience").value || 'general',
+    simplifierModel: document.getElementById("simplifierModel").value.trim(),
+    summarizerModel: document.getElementById("summarizerModel").value.trim(),
     bullets: document.getElementById("bullets").checked,
     dyslexia: document.getElementById("dyslexia").checked,
     highContrast: document.getElementById("highContrast").checked,

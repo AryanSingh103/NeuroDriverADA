@@ -55,11 +55,15 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   const settings = await getSettings();
   const mode = info.menuItemId === "ndh_summarize" ? "summarize" : "simplify";
   try {
-    const payload = await callAPI(mode, info.selectionText, {
-      reading_level: settings.readingLevel,
-      bullets: !!settings.bullets,
-      audience: settings.audience || "general"
-    });
+      const payloadOpts = {
+        reading_level: settings.readingLevel,
+        bullets: !!settings.bullets,
+        audience: settings.audience || "general",
+      };
+      if (settings.simplifierModel) payloadOpts.simplifier_model = settings.simplifierModel;
+      if (settings.summarizerModel) payloadOpts.summarizer_model = settings.summarizerModel;
+
+      const payload = await callAPI(mode, info.selectionText, payloadOpts);
     chrome.tabs.sendMessage(tab.id, { type: "NDH_SHOW_RESULT", data: payload, settings, mode });
   } catch (e) {
     chrome.tabs.sendMessage(tab.id, { type: "NDH_ERROR", error: e.message });
@@ -78,11 +82,15 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
     try {
       const settings = await getSettings();
-      const payload = await callAPI(msg.mode, msg.text, {
+      const payloadOpts = {
         reading_level: settings.readingLevel,
         bullets: !!settings.bullets,
         audience: settings.audience || "general",
-      });
+      };
+      if (settings.simplifierModel) payloadOpts.simplifier_model = settings.simplifierModel;
+      if (settings.summarizerModel) payloadOpts.summarizer_model = settings.summarizerModel;
+
+      const payload = await callAPI(msg.mode, msg.text, payloadOpts);
       safeSend({ ok: true, payload, settings });
     } catch (e) {
       safeSend({ ok: false, error: e?.message || String(e) });

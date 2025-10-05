@@ -1,0 +1,9 @@
+
+# Runtime dependencies for the backend
+fastapi==0.95.2
+pydantic==1.10.13
+requests==2.31.0
+httpx==0.24.1
+uvicorn==0.22.0
+orjson==3.11.3
+
