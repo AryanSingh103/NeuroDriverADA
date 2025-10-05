@@ -187,11 +187,15 @@ function ensureOverlay() {
     const text = $("#out").innerText;
     const btn = $("#tts");
     
+    console.log("[Content Script] TTS button clicked, text length:", text.length);
+    
     // Disable button and show loading state
     btn.disabled = true;
     btn.textContent = "🔊 Loading...";
     
     try {
+      console.log("[Content Script] Calling TTS endpoint...");
+      
       // Call backend TTS endpoint
       const response = await fetch("http://localhost:8000/tts", {
         method: "POST",
@@ -205,39 +209,54 @@ function ensureOverlay() {
         })
       });
       
+      console.log("[Content Script] TTS response status:", response.status);
+      
       if (!response.ok) {
-        throw new Error(`TTS API error: ${response.status}`);
+        const errorText = await response.text();
+        console.error("[Content Script] TTS API error:", response.status, errorText);
+        throw new Error(`TTS API error: ${response.status} - ${errorText}`);
       }
       
       // Get audio blob and play it
       const audioBlob = await response.blob();
+      console.log("[Content Script] Audio blob size:", audioBlob.size, "type:", audioBlob.type);
+      
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
       
+      console.log("[Content Script] Playing audio...");
+      
       // Play audio
-      audio.play();
+      await audio.play();
       
       // Update button text while playing
       btn.textContent = "🔊 Playing...";
       
       // Reset button when done
       audio.onended = () => {
+        console.log("[Content Script] Audio playback finished");
         btn.textContent = "🔊 Read Aloud";
         btn.disabled = false;
         URL.revokeObjectURL(audioUrl);  // Clean up
       };
       
       // Handle errors during playback
-      audio.onerror = () => {
+      audio.onerror = (e) => {
+        console.error("[Content Script] Audio playback error:", e);
         btn.textContent = "🔊 Read Aloud";
         btn.disabled = false;
         URL.revokeObjectURL(audioUrl);
-        console.error("[Content Script] Audio playback error");
       };
       
     } catch (error) {
       console.error("[Content Script] TTS error:", error);
       btn.textContent = "🔊 Error";
+      setTimeout(() => {
+        btn.textContent = "🔊 Read Aloud";
+        btn.disabled = false;
+      }, 2000);
+    }
+  };
       setTimeout(() => {
         btn.textContent = "🔊 Read Aloud";
         btn.disabled = false;
