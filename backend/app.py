@@ -54,6 +54,9 @@ app.add_middleware(
 )
 
 def require_api_key(request: Request):
+    # Skip authentication for OPTIONS requests (CORS preflight)
+    if request.method == "OPTIONS":
+        return
     header_key = request.headers.get("x-api-key")
     if header_key != API_KEY:
         raise HTTPException(status_code=401, detail="Invalid API key")
