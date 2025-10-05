@@ -183,12 +183,66 @@ function ensureOverlay() {
     promptOverlay.onclick = (e) => { if(e.target === promptOverlay) promptOverlay.remove(); };
     document.body.appendChild(promptOverlay);
   };
-  $("#tts").onclick = () => {
+  $("#tts").onclick = async () => {
     const text = $("#out").innerText;
-    const u = new SpeechSynthesisUtterance(text);
-    u.rate = host.dataset.ttsrate ? parseFloat(host.dataset.ttsrate) : 0.95;
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(u);
+    const btn = $("#tts");
+    
+    // Disable button and show loading state
+    btn.disabled = true;
+    btn.textContent = "🔊 Loading...";
+    
+    try {
+      // Call backend TTS endpoint
+      const response = await fetch("http://localhost:8000/tts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": "460975e97dbaee9cf9719e0a57f706a47c6377aca6083e6641077188e64d97c9"
+        },
+        body: JSON.stringify({
+          text: text,
+          voice_id: "21m00Tcm4TlvDq8ikWAM"  // Rachel voice (clear and professional)
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`TTS API error: ${response.status}`);
+      }
+      
+      // Get audio blob and play it
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      
+      // Play audio
+      audio.play();
+      
+      // Update button text while playing
+      btn.textContent = "🔊 Playing...";
+      
+      // Reset button when done
+      audio.onended = () => {
+        btn.textContent = "🔊 Read Aloud";
+        btn.disabled = false;
+        URL.revokeObjectURL(audioUrl);  // Clean up
+      };
+      
+      // Handle errors during playback
+      audio.onerror = () => {
+        btn.textContent = "🔊 Read Aloud";
+        btn.disabled = false;
+        URL.revokeObjectURL(audioUrl);
+        console.error("[Content Script] Audio playback error");
+      };
+      
+    } catch (error) {
+      console.error("[Content Script] TTS error:", error);
+      btn.textContent = "🔊 Error";
+      setTimeout(() => {
+        btn.textContent = "🔊 Read Aloud";
+        btn.disabled = false;
+      }, 2000);
+    }
   };
 
   return host;

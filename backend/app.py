@@ -3,10 +3,13 @@ from __future__ import annotations
 
 import os
 from typing import Any, Dict, List
+from io import BytesIO
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
+from pydantic import BaseModel
 
 from schemas import ProcessOptions, ProcessRequest, ProcessResponse
 from hf_client import call_hf
@@ -20,6 +23,7 @@ load_dotenv()
 
 API_KEY = "460975e97dbaee9cf9719e0a57f706a47c6377aca6083e6641077188e64d97c9"
 HF_API_KEY = os.getenv("HF_API_KEY", "")  # Load from environment
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")  # ElevenLabs API key
 
 ALLOWED_ORIGINS = [
     "chrome-extension://eeblnbclbapkecjljnlfjgcfhcikhhgk",
@@ -54,13 +58,52 @@ def require_api_key(request: Request):
     if header_key != API_KEY:
         raise HTTPException(status_code=401, detail="Invalid API key")
 
+# Schema for TTS request
+class TTSRequest(BaseModel):
+    text: str
+    voice_id: str = "21m00Tcm4TlvDq8ikWAM"  # Rachel voice (default)
+
 @app.get("/health")
 def health():
     return {
         "ok": True,
         "models": {"simplifier": SIMPLIFIER_MODEL, "summarizer": SUMMARIZER_MODEL},
         "cors": ALLOWED_ORIGINS,
+        "elevenlabs": bool(ELEVENLABS_API_KEY),
     }
+
+@app.post("/tts", dependencies=[Depends(require_api_key)])
+async def text_to_speech(req: TTSRequest):
+    """
+    Convert text to speech using ElevenLabs API.
+    Returns audio/mpeg stream.
+    """
+    if not ELEVENLABS_API_KEY:
+        raise HTTPException(status_code=500, detail="ElevenLabs API key not configured")
+    
+    try:
+        from elevenlabs import generate, Voice
+        
+        # Generate audio using ElevenLabs
+        audio = generate(
+            text=req.text,
+            voice=Voice(voice_id=req.voice_id),
+            api_key=ELEVENLABS_API_KEY,
+            model="eleven_monolingual_v1"  # Fast and efficient
+        )
+        
+        # Convert generator to bytes
+        audio_bytes = b"".join(audio) if hasattr(audio, '__iter__') else audio
+        
+        return Response(
+            content=audio_bytes,
+            media_type="audio/mpeg",
+            headers={
+                "Content-Disposition": "inline; filename=speech.mp3"
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"ElevenLabs error: {str(e)}")
 
 @app.post("/process", response_model=ProcessResponse, dependencies=[Depends(require_api_key)])
 async def process(req: ProcessRequest) -> ProcessResponse:
