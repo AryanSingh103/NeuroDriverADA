@@ -85,6 +85,53 @@ function ensureOverlay() {
         white-space: pre-wrap;
         word-wrap: break-word;
       }
+      /* Accessibility Report Styling */
+      .analyze-report {
+        white-space: normal;
+      }
+      .analyze-report h3 {
+        color: #93c5fd;
+        font-size: 16px;
+        margin: 16px 0 8px 0;
+        font-weight: 700;
+        border-bottom: 1px solid rgba(147, 197, 253, 0.3);
+        padding-bottom: 4px;
+      }
+      .analyze-report h3:first-child {
+        margin-top: 0;
+      }
+      .analyze-report p {
+        margin: 8px 0;
+        line-height: 1.6;
+      }
+      .analyze-report ul {
+        margin: 8px 0;
+        padding-left: 20px;
+      }
+      .analyze-report li {
+        margin: 4px 0;
+        line-height: 1.6;
+      }
+      .analyze-report .metric {
+        background: rgba(102, 126, 234, 0.2);
+        padding: 8px 12px;
+        border-radius: 8px;
+        margin: 8px 0;
+        border-left: 3px solid #667eea;
+      }
+      .analyze-report .warning {
+        background: rgba(251, 191, 36, 0.2);
+        border-left-color: #fbbf24;
+      }
+      .analyze-report .success {
+        background: rgba(34, 197, 94, 0.2);
+        border-left-color: #22c55e;
+      }
+      .analyze-report .action {
+        background: rgba(139, 92, 246, 0.2);
+        border-left-color: #8b5cf6;
+        font-weight: 600;
+      }
       .controls { 
         display: flex;
         gap: 10px;
@@ -278,6 +325,54 @@ function applySettings(host, settings) {
   host.dataset.ttsrate = String(settings.ttsRate || 0.95);
 }
 
+// Format the accessibility report with structured HTML
+function formatAccessibilityReport(text) {
+  // Parse the text and add structure
+  let html = text;
+  
+  // Convert section headers to styled headings
+  html = html.replace(/READING LEVEL:([^\n]+)/gi, '<div class="metric"><h3>📚 Reading Level</h3><p>$1</p></div>');
+  html = html.replace(/COMPLEXITY:([^\n]+)/gi, '<div class="metric"><h3>🧩 Complexity Score</h3><p>$1</p></div>');
+  html = html.replace(/TIME TO READ:([^\n]+)/gi, '<div class="metric"><h3>⏱️ Estimated Reading Time</h3><p>$1</p></div>');
+  
+  html = html.replace(/ATTENTION POINTS.*?:/gi, '<h3>⚠️ Attention Points (ADHD-Friendly)</h3>');
+  html = html.replace(/STRENGTHS.*?:/gi, '<h3>✅ Strengths</h3>');
+  html = html.replace(/KEY TAKEAWAYS.*?:/gi, '<h3>💡 Key Takeaways</h3>');
+  html = html.replace(/MAIN ACTION.*?:/gi, '<h3>🎯 Main Action</h3>');
+  
+  // Convert bullet points (- or •) to proper list items
+  const lines = html.split('\n');
+  let inList = false;
+  const formatted = [];
+  
+  for (let line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('-') || trimmed.startsWith('•')) {
+      if (!inList) {
+        formatted.push('<ul>');
+        inList = true;
+      }
+      formatted.push(`<li>${trimmed.substring(1).trim()}</li>`);
+    } else {
+      if (inList) {
+        formatted.push('</ul>');
+        inList = false;
+      }
+      formatted.push(line);
+    }
+  }
+  
+  if (inList) formatted.push('</ul>');
+  
+  html = formatted.join('\n');
+  
+  // Wrap action items in special styling
+  html = html.replace(/<h3>🎯 Main Action<\/h3>([\s\S]*?)(?=<h3|$)/gi, 
+    '<h3>🎯 Main Action</h3><div class="metric action">$1</div>');
+  
+  return html;
+}
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   console.log("[Content Script] Received message:", msg.type);
   
@@ -300,12 +395,21 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       badge.textContent = "✨ Simplified";
     } else if (msg.mode === "summarize") {
       badge.textContent = "📊 Summarized";
+    } else if (msg.mode === "analyze") {
+      badge.textContent = "🔍 Accessibility Report";
     } else {
       badge.textContent = "📝 Processed";
     }
     
-    // Render as text with preserved line breaks
-    out.textContent = msg.data.output || "";
+    // Format analyze mode with special styling
+    if (msg.mode === "analyze") {
+      out.innerHTML = formatAccessibilityReport(msg.data.output || "");
+      out.classList.add("analyze-report");
+    } else {
+      // Render as text with preserved line breaks
+      out.textContent = msg.data.output || "";
+      out.classList.remove("analyze-report");
+    }
     
     // Make sure the overlay is visible and scrolled into view
     host.style.display = 'block';
