@@ -1,19 +1,94 @@
-// --- Status helper ---
+// === DOM refs ===
 const statusEl = document.getElementById("ndhStatus");
-const allButtons = document.querySelectorAll(".btn");
+const progressBar = document.getElementById("progressBar");
+const connectionDot = document.getElementById("connectionDot");
+const connectionTooltip = document.getElementById("connectionTooltip");
+const charCountEl = document.getElementById("charCount");
+const manualTextarea = document.getElementById("manual");
 
+// Collect all action buttons for loading state
+const actionButtons = document.querySelectorAll(".action-btn, .manual-btn");
+
+// === Status helpers ===
 const setStatus = (message, type = "") => {
-  statusEl.className = `status ${type}`;
+  statusEl.className = `status-msg ${type}`;
+  statusEl.textContent = message || "";
+
   if (message === "Working…") {
-    statusEl.innerHTML = `<div class="spinner"></div><span>${message}</span>`;
-    allButtons.forEach(btn => btn.classList.add("loading"));
+    progressBar.classList.add("active");
+    actionButtons.forEach(btn => btn.classList.add("loading"));
   } else {
-    statusEl.textContent = message || "";
-    allButtons.forEach(btn => btn.classList.remove("loading"));
+    progressBar.classList.remove("active");
+    actionButtons.forEach(btn => btn.classList.remove("loading"));
   }
 };
 
-// --- Utilities ---
+// === Tab switching ===
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+    tab.classList.add("active");
+    document.getElementById(`panel-${tab.dataset.tab}`).classList.add("active");
+  });
+});
+
+// === Character counter ===
+manualTextarea.addEventListener("input", () => {
+  const len = manualTextarea.value.length;
+  charCountEl.textContent = `${len.toLocaleString()} chars`;
+  charCountEl.classList.remove("warn", "over");
+  if (len > 90000) charCountEl.classList.add("over");
+  else if (len > 50000) charCountEl.classList.add("warn");
+});
+
+// === Quick Settings toggles ===
+async function loadQuickSettings() {
+  const defaults = { dyslexia: true, highContrast: true, spacing: true };
+  const stored = await chrome.storage.sync.get(Object.keys(defaults));
+  const cfg = { ...defaults, ...stored };
+
+  document.querySelectorAll(".toggle-chip").forEach(chip => {
+    const key = chip.dataset.setting;
+    if (cfg[key]) chip.classList.add("active");
+    else chip.classList.remove("active");
+  });
+}
+
+document.querySelectorAll(".toggle-chip").forEach(chip => {
+  chip.addEventListener("click", async () => {
+    chip.classList.toggle("active");
+    const key = chip.dataset.setting;
+    const value = chip.classList.contains("active");
+    await chrome.storage.sync.set({ [key]: value });
+  });
+});
+
+loadQuickSettings();
+
+// === Backend health check ===
+async function checkBackendHealth() {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+    const res = await fetch("http://localhost:8000/health", { signal: controller.signal });
+    clearTimeout(timeout);
+    if (res.ok) {
+      connectionDot.className = "status-dot connected";
+      connectionTooltip.textContent = "Backend connected";
+    } else {
+      connectionDot.className = "status-dot error";
+      connectionTooltip.textContent = "Backend error";
+    }
+  } catch {
+    connectionDot.className = "status-dot error";
+    connectionTooltip.textContent = "Backend offline";
+  }
+}
+
+checkBackendHealth();
+
+// === Utilities ===
 async function getActiveTab() {
   const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
   return tab || null;
@@ -21,7 +96,6 @@ async function getActiveTab() {
 
 function canScriptInto(tab) {
   if (!tab || !tab.id) return false;
-  // block special schemes and restricted pages
   try {
     const u = new URL(tab.url || "");
     const blocked = new Set(["chrome:", "chrome-extension:", "edge:", "about:", "chrome-search:"]);
@@ -60,7 +134,7 @@ function callServiceWorker(mode, text, timeoutMs = 185000) {
     const timer = setTimeout(() => {
       if (!done) {
         done = true;
-        resolve({ ok: false, error: "Request timed out after 3 minutes. The AI models may be very slow. Please try again or wait a bit longer." });
+        resolve({ ok: false, error: "Request timed out after 3 minutes. The AI models may be very slow. Please try again." });
       }
     }, timeoutMs);
 
@@ -71,83 +145,30 @@ function callServiceWorker(mode, text, timeoutMs = 185000) {
 
       const err = chrome.runtime.lastError;
       if (err) {
-        // This is the "message port closed before a response was received" case
-        return resolve({ ok: false, error: `Extension error: ${err.message}. Try reloading the extension.` });
+        return resolve({ ok: false, error: `Extension error: ${err.message}. Try reloading.` });
       }
 
-      resolve(resp || { ok: false, error: "No response from background service. Try reloading the extension." });
+      resolve(resp || { ok: false, error: "No response from background. Try reloading." });
     });
   });
 }
 
-async function ensureContentScriptLoaded(tabId) {
-  console.log("[Popup] Pinging content script...");
-  
-  // Try to ping the content script with retries
-  for (let i = 0; i < 3; i++) {
-    try {
-      const response = await new Promise((resolve, reject) => {
-        chrome.tabs.sendMessage(tabId, { type: "NDH_PING" }, (response) => {
-          if (chrome.runtime.lastError) {
-            reject(chrome.runtime.lastError);
-          } else {
-            resolve(response);
-          }
-        });
-      });
-      
-      if (response) {
-        console.log("[Popup] Content script responded to PING");
-        return; // Content script is ready
-      }
-    } catch (err) {
-      console.log(`[Popup] PING attempt ${i + 1} failed:`, err.message);
-      
-      // Content script not responding, try to inject it
-      if (i === 0) {
-        try {
-          console.log("[Popup] Injecting content script...");
-          await chrome.scripting.executeScript({
-            target: { tabId },
-            files: ["content.js"]
-          });
-          console.log("[Popup] Content script injected");
-          await new Promise(r => setTimeout(r, 200)); // Wait for initialization
-        } catch (injectErr) {
-          console.error("[Popup] Failed to inject content script:", injectErr);
-        }
-      } else {
-        await new Promise(r => setTimeout(r, 100 * i)); // Progressive backoff
-      }
-    }
-  }
-  
-  console.log("[Popup] Content script ready (or timeout reached)");
-}
-
 async function run(mode, text) {
   setStatus("Working…");
-  console.log("[Popup] Starting run, mode:", mode, "text length:", text.length);
-  
+
   try {
-    console.log("[Popup] Calling service worker...");
     const resp = await callServiceWorker(mode, text);
-    console.log("[Popup] Service worker response:", resp);
-    
     if (!resp?.ok) throw new Error(resp?.error || "Unknown error");
 
     const tab = await getActiveTab();
     if (!canScriptInto(tab)) {
-      // Fall back: show a friendly message when we can't inject the overlay.
-      setStatus("Result ready — open a regular webpage and try again.", "error");
+      setStatus("Result ready — open a normal webpage.", "error");
       return;
     }
 
-    console.log("[Popup] Sending message to content script on tab:", tab.id);
-    
-    // Try to send message directly - the content script should already be loaded from manifest
+    // Try to send message to content script
     let messageSent = false;
-    
+
     try {
       await new Promise((resolve, reject) => {
         chrome.tabs.sendMessage(tab.id, {
@@ -157,28 +178,22 @@ async function run(mode, text) {
           mode,
         }, (response) => {
           if (chrome.runtime.lastError) {
-            console.log("[Popup] First attempt failed, trying to inject content script:", chrome.runtime.lastError.message);
             reject(chrome.runtime.lastError);
           } else {
-            console.log("[Popup] Message sent successfully!");
             messageSent = true;
             resolve();
           }
         });
       });
     } catch (firstError) {
-      // Content script not loaded, inject it manually
-      console.log("[Popup] Injecting content script...");
+      // Content script not loaded, inject it
       try {
         await chrome.scripting.executeScript({
           target: { tabId: tab.id },
           files: ["content.js"]
         });
-        
-        // Wait a moment for it to load
         await new Promise(r => setTimeout(r, 300));
-        
-        // Try sending the message again
+
         await new Promise((resolve, reject) => {
           chrome.tabs.sendMessage(tab.id, {
             type: "NDH_SHOW_RESULT",
@@ -189,63 +204,60 @@ async function run(mode, text) {
             if (chrome.runtime.lastError) {
               reject(chrome.runtime.lastError);
             } else {
-              console.log("[Popup] Message sent after injection!");
               messageSent = true;
               resolve();
             }
           });
         });
       } catch (injectError) {
-        console.error("[Popup] Failed to inject/send:", injectError);
         throw new Error("Could not display result. Try refreshing the page.");
       }
     }
-    
+
     if (messageSent) {
       setStatus("Done ✓", "success");
-      setTimeout(() => setStatus(""), 1500);
+      setTimeout(() => setStatus(""), 2000);
     }
   } catch (e) {
-    console.error("[Popup] Error:", e);
     setStatus(e.message || "Error", "error");
-    setTimeout(() => setStatus(""), 3000);
+    setTimeout(() => setStatus(""), 4000);
   }
 }
 
-// --- Wire up buttons (with guards) ---
+// === Wire up buttons ===
 document.getElementById("simplify").onclick = async () => {
   const tab = await getActiveTab();
-  if (!canScriptInto(tab)) return setStatus("Open this on a normal webpage.");
+  if (!canScriptInto(tab)) return setStatus("Open a normal webpage first.", "error");
   const text = await getSelection(tab.id);
-  if (!text) return setStatus("No selection found.");
+  if (!text) return setStatus("Select some text first.", "error");
   run("simplify", text);
 };
 
 document.getElementById("summarize").onclick = async () => {
   const tab = await getActiveTab();
-  if (!canScriptInto(tab)) return setStatus("Open this on a normal webpage.");
+  if (!canScriptInto(tab)) return setStatus("Open a normal webpage first.", "error");
   const text = await getSelection(tab.id);
-  if (!text) return setStatus("No selection found.");
+  if (!text) return setStatus("Select some text first.", "error");
   run("summarize", text);
 };
 
 document.getElementById("simplifyManual").onclick = async () => {
-  const text = document.getElementById("manual").value.trim();
-  if (!text) return setStatus("Paste text first.");
+  const text = manualTextarea.value.trim();
+  if (!text) return setStatus("Paste some text first.", "error");
   run("simplify", text);
 };
 
 document.getElementById("summarizeManual").onclick = async () => {
-  const text = document.getElementById("manual").value.trim();
-  if (!text) return setStatus("Paste text first.");
+  const text = manualTextarea.value.trim();
+  if (!text) return setStatus("Paste some text first.", "error");
   run("summarize", text);
 };
 
 document.getElementById("analyzePage").onclick = async () => {
   const tab = await getActiveTab();
-  if (!canScriptInto(tab)) return setStatus("Open this on a normal webpage.");
+  if (!canScriptInto(tab)) return setStatus("Open a normal webpage first.", "error");
   let text = await getSelection(tab.id);
   if (!text) text = await getPageText(tab.id);
-  if (!text) return setStatus("Could not extract page text.");
-  run("analyze", text); // Use analyze mode for accessibility report
+  if (!text) return setStatus("Could not extract page text.", "error");
+  run("analyze", text);
 };

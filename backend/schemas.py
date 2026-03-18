@@ -4,9 +4,9 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 class ProcessOptions(BaseModel):
-    reading_level: Optional[str] = Field(default=None)
-    bullets: Optional[bool] = Field(default=None)
-    audience: Optional[str] = Field(default=None)
+    reading_level: Optional[str] = None
+    bullets: Optional[bool] = None
+    audience: Optional[str] = None
 
 class ProcessRequest(BaseModel):
     mode: str = Field(pattern="^(simplify|summarize|analyze)$")

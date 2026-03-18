@@ -11,10 +11,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel
 
-from .schemas import ProcessOptions, ProcessRequest, ProcessResponse
-from .hf_client import call_hf
-from .utils import chunk_text, memoize_response
-from .prompts import make_prompt
+from schemas import ProcessOptions, ProcessRequest, ProcessResponse
+from hf_client import call_hf
+from utils import chunk_text, memoize_response
+from prompts import make_prompt
 
 # Load environment variables from .env file
 # Get the directory where this file is located (backend/)
@@ -152,7 +152,7 @@ async def process(req: ProcessRequest) -> ProcessResponse:
 
     # simple per-process memo
     cache_key = memoize_response.make_key(
-        req.mode, req.text, req.options.dict() if req.options else None
+        req.mode, req.text, req.options.model_dump() if req.options else None
     )
     cached = memoize_response.get(cache_key)
     if cached is not None:

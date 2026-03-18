@@ -4,64 +4,632 @@
   <meta charset="utf-8" />
   <title>NeuroDrive Helper</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    :root{
-      --bg:#0b0c10;--card:#111318;--text:#f5f7fb;--muted:#c5c8d0;
-      --border:#252a34;--accent:#7c5cff;--focus:#93c5fd;
+    :root {
+      --bg: #0a0b0f;
+      --card: rgba(17, 19, 26, 0.85);
+      --card-solid: #111318;
+      --text: #f0f2f8;
+      --muted: #8b8fa3;
+      --border: rgba(255,255,255,0.06);
+      --border-hover: rgba(124,92,255,0.3);
+      --accent: #7c5cff;
+      --accent-light: #a78bfa;
+      --accent-glow: rgba(124,92,255,0.15);
+      --success: #34d399;
+      --error: #f87171;
+      --warning: #fbbf24;
+      --surface: rgba(255,255,255,0.03);
     }
-    *{box-sizing:border-box}
-    html,body{margin:0}
-    body{min-width:380px;background:var(--bg);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--text)}
-    .card{padding:20px;background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
-    h3{margin:0 0 12px;font-size:20px;font-weight:700}
-    .stack{display:grid;gap:10px;margin-bottom:12px}
-    .btn{width:100%;background:linear-gradient(180deg,#1b1e26,#12141a);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-weight:600;cursor:pointer;font-size:14px;transition:all 0.2s ease}
-    .btn:hover{border-color:var(--accent);transform:translateY(-1px);box-shadow:0 4px 12px rgba(124,92,255,0.15)}
-    .btn:active{transform:translateY(0)}
-    .btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
-    .row{display:flex;gap:8px}
-    .btn.small{padding:10px 12px;font-size:13px}
-    .label{display:block;font-size:13px;color:var(--muted);margin:12px 0 8px;font-weight:500}
-    .input{width:100%;background:#0e1015;border:1px solid var(--border);border-radius:10px;color:var(--text);padding:12px;resize:vertical;font-family:inherit;font-size:14px;min-height:100px;transition:all 0.2s ease}
-    .input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,92,255,0.1)}
-    .input::placeholder{color:rgba(255,255,255,0.35)}
-    .footer{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
-    .link{color:#93c5fd;text-decoration:none;font-size:13px;font-weight:500;transition:color 0.2s}
-    .link:hover{color:#60a5fa;text-decoration:underline}
-    .status{font-size:12px;color:var(--muted);min-height:16px;display:flex;align-items:center;gap:6px}
-    .spinner{
-      width:14px;height:14px;border:2px solid rgba(124,92,255,0.2);
-      border-top-color:#7c5cff;border-radius:50%;animation:spin 0.8s linear infinite;
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      width: 420px;
+      background: var(--bg);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      color: var(--text);
+      overflow-x: hidden;
     }
-    @keyframes spin{to{transform:rotate(360deg)}}
-    .btn.loading{opacity:0.6;pointer-events:none}
-    .status.success{color:#10b981}
-    .status.error{color:#ef4444}
+
+    /* === ANIMATED HEADER === */
+    .header {
+      position: relative;
+      padding: 20px 20px 16px;
+      overflow: hidden;
+    }
+
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(135deg, #1a1140 0%, #0f0a2e 30%, #0a0b0f 100%);
+      z-index: 0;
+    }
+
+    .header::after {
+      content: '';
+      position: absolute;
+      top: -50%; left: -50%;
+      width: 200%; height: 200%;
+      background: radial-gradient(circle at 30% 50%, rgba(124,92,255,0.08) 0%, transparent 50%),
+                  radial-gradient(circle at 70% 30%, rgba(99,102,241,0.06) 0%, transparent 40%);
+      animation: headerGlow 8s ease-in-out infinite alternate;
+      z-index: 0;
+    }
+
+    @keyframes headerGlow {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(-5%, 5%); }
+    }
+
+    .header-content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #7c5cff 0%, #6366f1 50%, #8b5cf6 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 4px 16px rgba(124,92,255,0.3);
+      flex-shrink: 0;
+    }
+
+    .logo-text h1 {
+      font-size: 18px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #e0d4ff 0%, #a78bfa 50%, #7c5cff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.3px;
+    }
+
+    .logo-text .tagline {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 500;
+      margin-top: 1px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+      margin-left: auto;
+      flex-shrink: 0;
+      transition: all 0.4s ease;
+      position: relative;
+    }
+
+    .status-dot.connected {
+      background: var(--success);
+      box-shadow: 0 0 8px rgba(52,211,153,0.5);
+    }
+
+    .status-dot.connected::after {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(52,211,153,0.3);
+      animation: pingDot 2s ease-in-out infinite;
+    }
+
+    @keyframes pingDot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.4); }
+    }
+
+    .status-dot.error {
+      background: var(--error);
+      box-shadow: 0 0 8px rgba(248,113,113,0.5);
+    }
+
+    /* === TABS === */
+    .tabs {
+      display: flex;
+      padding: 0 20px;
+      gap: 2px;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tab {
+      flex: 1;
+      padding: 10px 0;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      position: relative;
+      transition: color 0.25s ease;
+      font-family: inherit;
+    }
+
+    .tab:hover { color: var(--text); }
+
+    .tab.active {
+      color: var(--accent-light);
+    }
+
+    .tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 10%;
+      width: 80%;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-light));
+      border-radius: 2px;
+      animation: tabSlide 0.3s ease;
+    }
+
+    @keyframes tabSlide {
+      from { transform: scaleX(0); opacity: 0; }
+      to { transform: scaleX(1); opacity: 1; }
+    }
+
+    /* === CONTENT === */
+    .content {
+      padding: 16px 20px 20px;
+    }
+
+    .tab-panel {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .tab-panel.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* === ACTION BUTTONS === */
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .action-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      padding: 14px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .action-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(124,92,255,0.08), transparent);
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+
+    .action-btn:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px rgba(124,92,255,0.1);
+    }
+
+    .action-btn:hover::before { opacity: 1; }
+
+    .action-btn:active {
+      transform: translateY(0);
+      box-shadow: none;
+    }
+
+    .action-btn .icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .action-btn .icon.simplify { background: rgba(124,92,255,0.15); }
+    .action-btn .icon.summarize { background: rgba(59,130,246,0.15); }
+    .action-btn .icon.analyze { background: rgba(16,185,129,0.15); }
+
+    .action-btn .btn-text {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .action-btn .btn-label {
+      font-size: 14px;
+      font-weight: 600;
+      position: relative;
+      z-index: 1;
+    }
+
+    .action-btn .btn-desc {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 400;
+      margin-top: 2px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .action-btn.loading {
+      pointer-events: none;
+    }
+
+    .action-btn.loading .icon {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* === TEXTAREA PANEL === */
+    .textarea-wrap {
+      position: relative;
+    }
+
+    .input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      padding: 14px;
+      resize: vertical;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      min-height: 120px;
+      transition: all 0.25s ease;
+      line-height: 1.5;
+    }
+
+    .input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .input::placeholder { color: rgba(255,255,255,0.2); }
+
+    .char-count {
+      position: absolute;
+      bottom: 10px;
+      right: 12px;
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 500;
+      pointer-events: none;
+      transition: color 0.2s;
+    }
+
+    .char-count.warn { color: var(--warning); }
+    .char-count.over { color: var(--error); }
+
+    .manual-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .manual-btn {
+      flex: 1;
+      padding: 11px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .manual-btn:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(124,92,255,0.1);
+    }
+
+    .manual-btn:active { transform: translateY(0); }
+
+    .manual-btn.loading {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    /* === QUICK SETTINGS === */
+    .quick-settings {
+      margin-top: 14px;
+      padding: 12px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    .qs-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+
+    .qs-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .toggle-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.25s ease;
+      user-select: none;
+      font-family: inherit;
+    }
+
+    .toggle-chip:hover {
+      border-color: rgba(255,255,255,0.12);
+      color: var(--text);
+    }
+
+    .toggle-chip.active {
+      background: var(--accent-glow);
+      border-color: rgba(124,92,255,0.3);
+      color: var(--accent-light);
+    }
+
+    .toggle-chip .chip-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: all 0.25s ease;
+    }
+
+    .toggle-chip.active .chip-dot {
+      background: var(--accent);
+      box-shadow: 0 0 6px rgba(124,92,255,0.5);
+    }
+
+    /* === PROGRESS BAR === */
+    .progress-bar {
+      height: 3px;
+      background: var(--border);
+      border-radius: 3px;
+      margin: 14px 0 0;
+      overflow: hidden;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .progress-bar.active { opacity: 1; }
+
+    .progress-bar .bar {
+      height: 100%;
+      width: 30%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-light), var(--accent));
+      border-radius: 3px;
+      animation: progressSlide 1.5s ease-in-out infinite;
+    }
+
+    @keyframes progressSlide {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(400%); }
+    }
+
+    /* === FOOTER === */
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 20px 16px;
+    }
+
+    .footer-link {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 500;
+      transition: color 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .footer-link:hover { color: var(--accent-light); }
+
+    .status-msg {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 500;
+      min-height: 16px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.3s ease;
+    }
+
+    .status-msg.success { color: var(--success); }
+    .status-msg.error { color: var(--error); }
+
+    /* === TOOLTIP === */
+    .status-dot-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .status-dot-wrap .tooltip {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: var(--card-solid);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .status-dot-wrap:hover .tooltip { opacity: 1; }
+
+    /* === RESPONSIVE STATES === */
+    .action-btn:focus-visible,
+    .manual-btn:focus-visible,
+    .tab:focus-visible,
+    .toggle-chip:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h3>NeuroDrive Helper</h3>
-    <div class="stack">
-      <button id="simplify" class="btn">Simplify Selection</button>
-      <button id="summarize" class="btn">Summarize Selection</button>
-      <button id="analyzePage" class="btn">Analyze Page</button>
-    </div>
 
-    <label for="manual" class="label">Or paste text here</label>
-    <textarea id="manual" rows="5" placeholder="Paste text here…" class="input"></textarea>
-
-    <div class="row" style="margin-top:8px;">
-      <button id="simplifyManual" class="btn small">Simplify</button>
-      <button id="summarizeManual" class="btn small">Summarize</button>
-    </div>
-
-    <div class="footer">
-      <a href="options.html" target="_blank" class="link">Settings</a>
-      <div id="ndhStatus" class="status" aria-live="polite"></div>
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-content">
+      <div class="logo-icon">🧠</div>
+      <div class="logo-text">
+        <h1>NeuroDrive</h1>
+        <div class="tagline">Accessible Reading Assistant</div>
+      </div>
+      <div class="status-dot-wrap">
+        <div id="connectionDot" class="status-dot" title="Checking backend..."></div>
+        <div class="tooltip" id="connectionTooltip">Checking...</div>
+      </div>
     </div>
   </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" data-tab="actions">⚡ Quick Actions</button>
+    <button class="tab" data-tab="paste">📝 Paste Text</button>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+    <!-- Tab 1: Quick Actions -->
+    <div id="panel-actions" class="tab-panel active">
+      <div class="actions">
+        <button id="simplify" class="action-btn">
+          <div class="icon simplify">✨</div>
+          <div class="btn-text">
+            <span class="btn-label">Simplify Selection</span>
+            <span class="btn-desc">Rewrite selected text in simpler language</span>
+          </div>
+        </button>
+        <button id="summarize" class="action-btn">
+          <div class="icon summarize">📋</div>
+          <div class="btn-text">
+            <span class="btn-label">Summarize Selection</span>
+            <span class="btn-desc">Get key points from selected text</span>
+          </div>
+        </button>
+        <button id="analyzePage" class="action-btn">
+          <div class="icon analyze">🔍</div>
+          <div class="btn-text">
+            <span class="btn-label">Analyze Page</span>
+            <span class="btn-desc">Accessibility report for the full page</span>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Tab 2: Paste Text -->
+    <div id="panel-paste" class="tab-panel">
+      <div class="textarea-wrap">
+        <textarea id="manual" rows="5" placeholder="Paste or type text here…" class="input"></textarea>
+        <div id="charCount" class="char-count">0 chars</div>
+      </div>
+      <div class="manual-actions">
+        <button id="simplifyManual" class="manual-btn">✨ Simplify</button>
+        <button id="summarizeManual" class="manual-btn">📋 Summarize</button>
+      </div>
+    </div>
+
+    <!-- Quick Settings -->
+    <div class="quick-settings">
+      <div class="qs-title">Quick Settings</div>
+      <div class="qs-row">
+        <button id="toggleDyslexia" class="toggle-chip" data-setting="dyslexia">
+          <span class="chip-dot"></span> Dyslexia Font
+        </button>
+        <button id="toggleContrast" class="toggle-chip" data-setting="highContrast">
+          <span class="chip-dot"></span> High Contrast
+        </button>
+        <button id="toggleSpacing" class="toggle-chip" data-setting="spacing">
+          <span class="chip-dot"></span> Spacing
+        </button>
+      </div>
+    </div>
+
+    <!-- Progress Bar -->
+    <div id="progressBar" class="progress-bar">
+      <div class="bar"></div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <a href="options.html" target="_blank" class="footer-link">⚙️ Settings</a>
+    <div id="ndhStatus" class="status-msg" aria-live="polite"></div>
+  </div>
+
   <script src="popup.js"></script>
 </body>
 </html>
