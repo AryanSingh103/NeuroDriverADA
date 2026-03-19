@@ -152,7 +152,7 @@ async def process(req: ProcessRequest) -> ProcessResponse:
 
     # simple per-process memo
     cache_key = memoize_response.make_key(
-        req.mode, req.text, req.options.model_dump() if req.options else None
+        req.mode, req.text, (req.options.dict() if hasattr(req.options, 'dict') else req.options.model_dump()) if req.options else None
     )
     cached = memoize_response.get(cache_key)
     if cached is not None:
